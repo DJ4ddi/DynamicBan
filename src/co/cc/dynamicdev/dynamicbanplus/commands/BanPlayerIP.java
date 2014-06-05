@@ -3,6 +3,7 @@ package co.cc.dynamicdev.dynamicbanplus.commands;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.UUID;
 
 import net.milkbowl.vault.permission.Permission;
 
@@ -32,15 +33,11 @@ public class BanPlayerIP implements CommandExecutor {
 	@Override
 	public boolean onCommand(CommandSender cs, Command cmd, String alias, String[] args) {
 		if (cmd.getName().equalsIgnoreCase("dynbanip")) {
-			if (cs instanceof Player) {
-				if (!(DynamicBan.permission.has(cs, "dynamicban.ban.ip")|| cs.isOp())) {
-					cs.sendMessage(DynamicBan.tag + ChatColor.RED + "Sorry, you do not have the permission to use that command!");
-					return true;
-				}
-			}
+			if (!plugin.permissionCheck(cs, "ban.ip")) return true;
+			
 			if (args.length == 0) {
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Usage: /" + cmd.getAliases().toString() + " [Name] (Reason)");
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "IP-Ban the player specified, with an optional reason");
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Usage: /" + cmd.getAliases().toString() + " [Name] (Reason)");
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "IP-Ban the player specified, with an optional reason");
 				return true;
 			}
 			if (args[0].endsWith("*")) {
@@ -49,19 +46,23 @@ public class BanPlayerIP implements CommandExecutor {
 					return true;
 				}
 			}
-			if (DynamicBanCache.isImmune(args[0].toLowerCase()) && plugin.getConfig().getBoolean("config.op_immune_bypass") == true && cs.isOp()){
-				cs.sendMessage(DynamicBan.tag + ChatColor.RED + "Since you are OP, you bypassed " + args[0] + "'s immunity.");
-			} else {
-				if (DynamicBanCache.isImmune(args[0].toLowerCase())) {
-					cs.sendMessage(DynamicBan.tag + ChatColor.RED + "Sorry, that player is immune to your command!");
+			
+			UUID pid = plugin.getUuidAsynch(args[0], plugin.createDelayedCommand(cs, cmd.getName(), args, args[0]));
+			if (pid == null) return true;
+			
+			if (DynamicBanCache.isImmune(pid)) {
+				if (plugin.getConfig().getBoolean("config.op_immune_bypass") == true && cs.isOp()) {
+					cs.sendMessage(plugin.getTag() + ChatColor.RED + "Since you are OP, you bypassed " + args[0] + "'s immunity.");
+				} else {
+					cs.sendMessage(plugin.getTag() + ChatColor.RED + "Sorry, that player is immune to your command!");
 					return true;
 				}
 			}
-			playerDataFile = new File("plugins/DynamicBan/playerdata/" + args[0].toLowerCase() + "/", "player.dat");
+			
+			playerDataFile = new File("plugins/DynamicBan/playerdata/" + pid + "/", "player.dat");
 			YamlConfiguration playerData = YamlConfiguration.loadConfiguration(playerDataFile);
 			if (playerDataFile.exists()) {
 				String iptoban = playerData.getString("IP-Address").replace(".", "/");
-				Player playertoban = plugin.getServer().getPlayerExact(args[0]);
 				String banReason;
 				String broadcastReason;
 				String afterBanReason;
@@ -69,9 +70,13 @@ public class BanPlayerIP implements CommandExecutor {
 				SimpleDateFormat sdf = new SimpleDateFormat("EEE, MMM d, yyyy '@' HH:mma");
 				String date = sdf.format(today);
 				if (args.length == 1) {
-					banReason = plugin.getConfig().getString("messages.ip_ban_message").replace("{REASON}", plugin.getConfig().getString("other_messages.default_reason")).replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
+					banReason = plugin.getConfig().getString("messages.ip_ban_message")
+							.replace("{REASON}", plugin.getConfig().getString("other_messages.default_reason"))
+							.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
 				} else {
-					banReason = plugin.getConfig().getString("messages.ip_ban_message").replace("{REASON}", plugin.combineSplit(1, args, " ")).replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
+					banReason = plugin.getConfig().getString("messages.ip_ban_message")
+							.replace("{REASON}", plugin.combineSplit(1, args, " "))
+							.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
 				}
 
 				if (args.length == 1) {
@@ -87,20 +92,22 @@ public class BanPlayerIP implements CommandExecutor {
 				}
 				DynamicBanCache.addIpBan(iptoban, afterBanReason, cs.getName(), date);
 				plugin.getServer().banIP(iptoban.replace("/", "."));
-				String pname;
-				if (playertoban != null) {
-					playertoban.kickPlayer(banReason);
-					pname = playertoban.getName();
-				} else {
-					pname = args[0];
+				
+				Player targetPlayer = plugin.getServer().getPlayer(pid);
+				if (targetPlayer != null) {
+					targetPlayer.kickPlayer(banReason);
 				}
 				if (plugin.getConfig().getBoolean("config.broadcast_on_ipban")) {
-					String broadcastMessage = plugin.getConfig().getString("broadcast_messages.ip_ban_message").replace("{PLAYER}", pname).replace("{REASON}", broadcastReason).replace("{SENDER}", cs.getName()).replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
+					String broadcastMessage = plugin.getConfig().getString("broadcast_messages.ip_ban_message")
+							.replace("{PLAYER}", args[0])
+							.replace("{REASON}", broadcastReason)
+							.replace("{SENDER}", cs.getName())
+							.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
 					plugin.getServer().broadcastMessage(broadcastMessage);
 					return true;
 				}
 			} else {
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + args[0] + " has no data stored!");
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + args[0] + " has no data stored!");
 			}
 		}
 		return true;

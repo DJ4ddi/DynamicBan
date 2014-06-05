@@ -5,13 +5,13 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.UUID;
 
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
 
 import co.cc.dynamicdev.dynamicbanplus.DynamicBan;
 import co.cc.dynamicdev.dynamicbanplus.DynamicBanCache;
@@ -30,16 +30,11 @@ public class PlayerStanding implements CommandExecutor {
 	@Override
 	public boolean onCommand(CommandSender cs, Command cmd, String alias, String[] args) {
 		if (cmd.getName().equalsIgnoreCase("dynstanding")) {
-			if (cs instanceof Player) {
-				Player player = (Player) cs;
-				if (!(DynamicBan.permission.has(cs, "dynamicban.player.standing") || player.isOp())) {
-					cs.sendMessage(DynamicBan.tag + ChatColor.RED + "Sorry, you do not have the permission to use that command!");
-					return true;
-				}
-			}
+			if (!plugin.permissionCheck(cs, "player.standing")) return true;
+			
 			if (args.length == 0 || args.length > 2) {
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Usage: /" + cmd.getAliases().toString() + " [Name] (Page)");
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Displays statistics of bans, kicks and warnings of a specified player.");
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Usage: /" + cmd.getAliases().toString() + " [Name] (Page)");
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Displays statistics of bans, kicks and warnings of a specified player.");
 				return true;
 			}
 			if (args[0].endsWith("*")) {
@@ -48,37 +43,45 @@ public class PlayerStanding implements CommandExecutor {
 					return true;
 				}
 			}
-			if (DynamicBanCache.isImmune(args[0].toLowerCase())) {
-				cs.sendMessage(DynamicBan.tag + ChatColor.RED + "Sorry, that player is immune to your command!");
-				return true;
+			
+			UUID pid = plugin.getUuidAsynch(args[0], plugin.createDelayedCommand(cs, cmd.getName(), args, args[0]));
+			if (pid == null) return true;
+			
+			if (DynamicBanCache.isImmune(pid)) {
+				if (plugin.getConfig().getBoolean("config.op_immune_bypass") == true && cs.isOp()) {
+					cs.sendMessage(plugin.getTag() + ChatColor.RED + "Since you are OP, you bypassed " + args[0] + "'s immunity.");
+				} else {
+					cs.sendMessage(plugin.getTag() + ChatColor.RED + "Sorry, that player is immune to your command!");
+					return true;
+				}
 			}
+			
 			if (args.length == 2) {
 				if (args[1].equals("2")) {
-					printPage2(cs, args[0]);
+					printPage2(cs, pid);
 				}
 				if (args[1].equals("1")) {
-					printPage1(cs, args[0]);
+					printPage1(cs, pid);
 				}
 			} else {
-				printPage1(cs, args[0]);
+				printPage1(cs, pid);
 			}
 		}
 		return true;
 	}
 
-	public void printPage1(CommandSender cs, String name) {
-		playerDataFile = new File("plugins/DynamicBan/playerdata/" + name.toLowerCase() + "/", "player.dat");
+	public void printPage1(CommandSender cs, UUID pid) {
+		playerDataFile = new File("plugins/DynamicBan/playerdata/" + pid + "/", "player.dat");
 		YamlConfiguration playerData = YamlConfiguration.loadConfiguration(playerDataFile);
 		if (playerDataFile.exists()) {
 			String playerIP = playerData.getString("IP-Address");
 			cs.sendMessage(ChatColor.GOLD + "<<============ " + ChatColor.BOLD + ChatColor.DARK_AQUA + "DynamicBan v" + plugin.getDescription().getVersion() + ChatColor.GOLD + " ============>>");
-			String pname = name.toLowerCase();
-			String banreason = DynamicBanCache.getPlayerBan(pname);
+			String banreason = DynamicBanCache.getPlayerBan(pid);
 			if (banreason != null) {
 				cs.sendMessage(ChatColor.GOLD + "Banned by DynamicBan: " + ChatColor.AQUA + "Yes");
 				cs.sendMessage(ChatColor.GOLD + "--> Banned for: " + banreason);
-				cs.sendMessage(ChatColor.GOLD + "--> Banned by: " + DynamicBanCache.getExecutor(pname));
-				cs.sendMessage(ChatColor.GOLD + "--> Time of ban: " + DynamicBanCache.getTime(pname));
+				cs.sendMessage(ChatColor.GOLD + "--> Banned by: " + DynamicBanCache.getExecutor(pid));
+				cs.sendMessage(ChatColor.GOLD + "--> Time of ban: " + DynamicBanCache.getTime(pid));
 			} else {
 				cs.sendMessage(ChatColor.GOLD + "Banned by DynamicBan: " + ChatColor.AQUA + "No");
 			}
@@ -92,7 +95,7 @@ public class PlayerStanding implements CommandExecutor {
 			} else {
 				cs.sendMessage(ChatColor.GOLD + "IP-Banned by DynamicBan: " + ChatColor.AQUA + "No");
 			}
-			String tempBan = DynamicBanCache.getTempBan(pname);
+			String tempBan = DynamicBanCache.getTempBan(pid);
 			long tempTime;
 			if (tempBan != null) {
 				tempTime = Long.valueOf(tempBan.split("::")[0]);
@@ -102,7 +105,7 @@ public class PlayerStanding implements CommandExecutor {
 					if (diff > 0) {
 						cs.sendMessage(ChatColor.GOLD + "TempBanned by DynamicBan: " + ChatColor.AQUA + "Yes");
 						cs.sendMessage(ChatColor.GOLD + "--> Banned for: " + tempBan.split("::")[1]);
-						cs.sendMessage(ChatColor.GOLD + "--> Banned by: " + DynamicBanCache.getExecutor(pname));
+						cs.sendMessage(ChatColor.GOLD + "--> Banned by: " + DynamicBanCache.getExecutor(pid));
 						cs.sendMessage(ChatColor.GOLD + "--> Ban-Length: " + diff + " second(s)");
 					}
 				} else {
@@ -129,7 +132,7 @@ public class PlayerStanding implements CommandExecutor {
 			} else {
 				cs.sendMessage(ChatColor.GOLD + "TempIPBanned by DynamicBan: " + ChatColor.AQUA + "No");
 			}
-			if (plugin.getServer().getOfflinePlayer(name).isBanned()) {
+			if (plugin.getServer().getOfflinePlayer(pid).isBanned()) {
 				cs.sendMessage(ChatColor.GOLD + "Banned by Bukkit: " + ChatColor.AQUA + "Yes");
 			} else {
 				cs.sendMessage(ChatColor.GOLD + "Banned by Bukkit: " + ChatColor.AQUA + "No");
@@ -139,7 +142,7 @@ public class PlayerStanding implements CommandExecutor {
 			} else {
 				cs.sendMessage(ChatColor.GOLD + "IP-Banned by Bukkit: " + ChatColor.AQUA + "No");
 			}
-			tempBan = DynamicBanCache.getMute(pname);
+			tempBan = DynamicBanCache.getMute(pid);
 			if (tempBan != null) {
 				tempTime = Long.valueOf(tempBan.split("::")[0]);
 				if (tempTime != 0) {
@@ -159,12 +162,12 @@ public class PlayerStanding implements CommandExecutor {
 			}
 			cs.sendMessage(ChatColor.GOLD + "Page 1 of 2");
 		} else {
-			cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "No data exists for the specified player!");
+			cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "No data exists for the specified player!");
 		}
 	}
 
-	public void printPage2(CommandSender cs, String name) {
-		playerDataFile = new File("plugins/DynamicBan/playerdata/" + name.toLowerCase() + "/", "player.dat");
+	public void printPage2(CommandSender cs, UUID pid) {
+		playerDataFile = new File("plugins/DynamicBan/playerdata/" + pid + "/", "player.dat");
 		YamlConfiguration playerData = YamlConfiguration.loadConfiguration(playerDataFile);
 		if (playerDataFile.exists()) {
 			playerData.options().copyDefaults(true);
@@ -216,7 +219,7 @@ public class PlayerStanding implements CommandExecutor {
 			}
 			cs.sendMessage(ChatColor.GOLD + "Page 2 of 2");
 		} else {
-			cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "No data exists for the specified player!"); 
+			cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "No data exists for the specified player!"); 
 		}
 	}
 }

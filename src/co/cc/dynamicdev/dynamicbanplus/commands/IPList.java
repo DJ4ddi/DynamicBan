@@ -38,8 +38,7 @@ public class IPList implements CommandExecutor {
 			} else {
 				cs.sendMessage("[DynamicBan] : List of every onlineplayer's IP-Address!");
 				for (Player onlinePlayer : plugin.getServer().getOnlinePlayers()) {
-					String onlinePlayerName = onlinePlayer.getName();
-					cs.sendMessage("Name: " + onlinePlayerName + "| IP-Address: " + DynamicBanCache.getIp(onlinePlayerName).replace("/", "."));
+					cs.sendMessage("Name: " + onlinePlayer.getName() + "| IP-Address: " + DynamicBanCache.getIp(onlinePlayer.getUniqueId()).replace("/", "."));
 				}
 			}
 		}

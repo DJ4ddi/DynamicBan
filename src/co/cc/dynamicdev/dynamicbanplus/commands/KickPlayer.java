@@ -2,6 +2,7 @@ package co.cc.dynamicdev.dynamicbanplus.commands;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.UUID;
 
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -27,15 +28,11 @@ public class KickPlayer implements CommandExecutor {
 	@Override
 	public boolean onCommand(CommandSender cs, Command cmd, String alias, String[] args) {
 		if (cmd.getName().equalsIgnoreCase("dynkick")) {
-			if (cs instanceof Player) {
-				if (!(DynamicBan.permission.has(cs, "dynamicban.kick") || cs.isOp())) {
-					cs.sendMessage(DynamicBan.tag + ChatColor.RED + "Sorry, you do not have the permission to use that command!");
-					return true;
-				}
-			}
+			if (!plugin.permissionCheck(cs, "kick")) return true;
+			
 			if (args.length == 0) {
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Usage: /" + cmd.getAliases().toString() + " [name] (reason)");
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Kick the player specified, with an optional reason");
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Usage: /" + cmd.getAliases().toString() + " [name] (reason)");
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Kick the player specified, with an optional reason");
 				return true;
 			}
 			if (args[0].endsWith("*")) {
@@ -44,25 +41,34 @@ public class KickPlayer implements CommandExecutor {
 					return true;
 				}
 			}
-			if (DynamicBanCache.isImmune(args[0].toLowerCase()) && plugin.getConfig().getBoolean("config.op_immune_bypass") == true && cs.isOp()) {
-				cs.sendMessage(DynamicBan.tag + ChatColor.RED + "Since you are OP, you bypassed " + args[0] + "'s immunity.");
-			} else {
-				if (DynamicBanCache.isImmune(args[0].toLowerCase())) {
-					cs.sendMessage(DynamicBan.tag + ChatColor.RED + "Sorry, that player is immune to your command!");
+			
+			UUID pid = plugin.getUuidAsynch(args[0], plugin.createDelayedCommand(cs, cmd.getName(), args, args[0]));
+			if (pid == null) return true;
+			
+			if (DynamicBanCache.isImmune(pid)) {
+				if (plugin.getConfig().getBoolean("config.op_immune_bypass") == true && cs.isOp()) {
+					cs.sendMessage(plugin.getTag() + ChatColor.RED + "Since you are OP, you bypassed " + args[0] + "'s immunity.");
+				} else {
+					cs.sendMessage(plugin.getTag() + ChatColor.RED + "Sorry, that player is immune to your command!");
 					return true;
 				}
 			}
-			playerDataFile = new File("plugins/DynamicBan/playerdata/" + args[0].toLowerCase() + "/", "player.dat");
+			
+			playerDataFile = new File("plugins/DynamicBan/playerdata/" + pid + "/", "player.dat");
 			YamlConfiguration playerData = YamlConfiguration.loadConfiguration(playerDataFile);
-			Player playertokick = plugin.getServer().getPlayerExact(args[0]);
+			Player playertokick = plugin.getServer().getPlayer(pid);
 			int kickNumber = playerData.getInt("kickedNumber");
 			String kickReason;
 			String broadcastReason;
 
 			if (args.length == 1) {
-				kickReason = plugin.getConfig().getString("messages.kick_message").replace("{REASON}", plugin.getConfig().getString("other_messages.default_reason")).replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
+				kickReason = plugin.getConfig().getString("messages.kick_message")
+						.replace("{REASON}", plugin.getConfig().getString("other_messages.default_reason"))
+						.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
 			} else {
-				kickReason = plugin.getConfig().getString("messages.kick_message").replace("{REASON}", plugin.combineSplit(1, args, " ")).replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
+				kickReason = plugin.getConfig().getString("messages.kick_message")
+						.replace("{REASON}", plugin.combineSplit(1, args, " "))
+						.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
 			}
 
 			if (args.length == 1) {
@@ -72,27 +78,24 @@ public class KickPlayer implements CommandExecutor {
 			}
 
 			if (playertokick == null) {
-				cs.sendMessage(DynamicBan.tag + ChatColor.RED + args[0] + " is not online!");
+				cs.sendMessage(plugin.getTag() + ChatColor.RED + args[0] + " is not online!");
 				return true;
 			} else {
 				playertokick.kickPlayer(kickReason);
-				if (plugin.getConfig().getBoolean("config.broadcast_on_kick") != false) {
-					String broadcastMessage = plugin.getConfig().getString("broadcast_messages.kick_message").replace("{PLAYER}", playertokick.getName()).replace("{REASON}", broadcastReason).replaceAll("(&([a-f0-9k-or]))", "\u00A7$2").replace("{SENDER}", cs.getName());
+				if (plugin.getConfig().getBoolean("config.broadcast_on_kick")) {
+					String broadcastMessage = plugin.getConfig().getString("broadcast_messages.kick_message")
+							.replace("{PLAYER}", playertokick.getName())
+							.replace("{REASON}", broadcastReason)
+							.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2")
+							.replace("{SENDER}", cs.getName());
 					plugin.getServer().broadcastMessage(broadcastMessage);
-					playerData.set("kickedNumber", kickNumber + +1);
-					try {
-						playerData.save(playerDataFile);
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-					return true;
-				} else {
-					playerData.set("kickedNumber", kickNumber + +1);
-					try {
-						playerData.save(playerDataFile);
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
+				}
+				
+				playerData.set("kickedNumber", kickNumber + +1);
+				try {
+					playerData.save(playerDataFile);
+				} catch (IOException e) {
+					e.printStackTrace();
 				}
 			}
 		}

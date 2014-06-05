@@ -1,13 +1,13 @@
 package co.cc.dynamicdev.dynamicbanplus.commands;
 
 import java.io.File;
+import java.util.UUID;
 
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
 
 import co.cc.dynamicdev.dynamicbanplus.DynamicBan;
 import co.cc.dynamicdev.dynamicbanplus.DynamicBanCache;
@@ -27,39 +27,42 @@ public class RangeUnbanIP implements CommandExecutor {
 	@Override
 	public boolean onCommand(CommandSender cs, Command cmd, String alias, String[] args) {
 		if (cmd.getName().equalsIgnoreCase("dynunbanrange")) {
-			if (cs instanceof Player) {
-				if (!(DynamicBan.permission.has(cs, "dynamicban.unban.range") || cs.isOp())) {
-					cs.sendMessage(DynamicBan.tag + ChatColor.RED + "Sorry, you do not have the permission to use that command!");
-					return true;
-				}
-			}
+			if (!plugin.permissionCheck(cs, "unban.range")) return true;
+			
 			if (args.length == 0) {
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Usage: /" + cmd.getAliases().toString() + " [Name]");
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Unban a rangebanned player from the system.");
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Usage: /" + cmd.getAliases().toString() + " [Name]");
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Unban a rangebanned player from the system.");
 				return true;
 			}
-			playerDataFile = new File("plugins/DynamicBan/playerdata/" + args[0].toLowerCase() + "/", "player.dat");
+			
+			UUID pid = plugin.getUuidAsynch(args[0], plugin.createDelayedCommand(cs, cmd.getName(), args, args[0]));
+			if (pid == null) return true;
+			
+			playerDataFile = new File("plugins/DynamicBan/playerdata/" + pid + "/", "player.dat");
 			YamlConfiguration playerData = YamlConfiguration.loadConfiguration(playerDataFile);
 			if (playerDataFile.exists()) {
 				String playerip = playerData.getString("IP-Address").replace(".", "/");
 				String[] IP = playerip.split("/");
 				if (DynamicBanCache.getRangeBan(IP[0]+ "/" + "*"+"/" + "*" +"/" + "*") != null || DynamicBanCache.getRangeBan(IP[0]+ "/" + IP[1] + "/" + "*" +"/" + "*") != null || DynamicBanCache.getRangeBan(IP[0]+ "/" + IP[1] + "/" + IP[2] +"/" + "*") != null) {
-					cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + args[0] + " has been rangebanned by DynamicBan, unbanning IP-Range.");
+					cs.sendMessage(plugin.getTag() + ChatColor.AQUA + args[0] + " has been rangebanned by DynamicBan, unbanning IP-Range.");
 					if (DynamicBanCache.getRangeBan(IP[0]+ "/" + "*"+"/" + "*" +"/" + "*") != null) {
-						DynamicBanCache.removeRangeBan(IP[0]+ "/" + "*"+"/" + "*" +"/" + "*", playerip);
+						DynamicBanCache.removeRangeBan(IP[0]+ "/" + "*"+"/" + "*" +"/" + "*");
 					}
 					if (DynamicBanCache.getRangeBan(IP[0]+ "/" + IP[1] + "/" + "*" +"/" + "*") != null) {
-						DynamicBanCache.removeRangeBan(IP[0]+ "/" + IP[1] + "/" + "*" +"/" + "*", playerip);
+						DynamicBanCache.removeRangeBan(IP[0]+ "/" + IP[1] + "/" + "*" +"/" + "*");
 					}
 					if (DynamicBanCache.getRangeBan(IP[0]+ "/" + IP[1] + "/" + IP[2] +"/" + "*") != null) {
-						DynamicBanCache.removeRangeBan(IP[0]+ "/" + IP[1] + "/" + IP[2] +"/" + "*", playerip);
+						DynamicBanCache.removeRangeBan(IP[0]+ "/" + IP[1] + "/" + IP[2] +"/" + "*");
 					}
 					if (plugin.getConfig().getBoolean("config.broadcast_on_unban")) {
-						String broadcastMessage = plugin.getConfig().getString("broadcast_messages.unban_message").replace("{PLAYER}", playerData.getString("DisplayName")).replace("{SENDER}", cs.getName()).replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
+						String broadcastMessage = plugin.getConfig().getString("broadcast_messages.unban_message")
+								.replace("{PLAYER}", playerData.getString("DisplayName"))
+								.replace("{SENDER}", cs.getName())
+								.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
 						plugin.getServer().broadcastMessage(broadcastMessage);
 					}
 				} else {
-					cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "No data exists for the specified player!");
+					cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "No data exists for the specified player!");
 				}
 			}
 		}

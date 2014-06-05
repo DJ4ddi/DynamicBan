@@ -4,7 +4,6 @@ import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
 
 import co.cc.dynamicdev.dynamicbanplus.DynamicBan;
 import co.cc.dynamicdev.dynamicbanplus.DynamicBanCache;
@@ -23,26 +22,20 @@ public class ReloadData implements CommandExecutor {
 	@Override
 	public boolean onCommand(CommandSender cs, Command cmd, String alias, String[] args) {
 		if (cmd.getName().equalsIgnoreCase("dynreload")) {
-			if (cs instanceof Player) {
-				if (!(DynamicBan.permission.has(cs, "dynamicban.reload") || cs.isOp())) {
-					cs.sendMessage(DynamicBan.tag + ChatColor.RED + "Sorry, you do not have the permission to use that command!");
-					return true;
-				}
-			}
+			if (!plugin.permissionCheck(cs, "reload")) return true;
+			
 			if (args.length > 0) {
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Usage: /" + cmd.getAliases().toString() + "");
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Reloads the DynamicBan data.");
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Usage: /" + cmd.getAliases().toString() + "");
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Reloads the DynamicBan data.");
 				return true;
 			}
 			plugin.reloadConfig();
-			plugin.loadTag(plugin.getConfig());
-			plugin.loadWarnFormat(plugin.getConfig());
-			plugin.loadDnsblServices(plugin.getConfig());
+			plugin.reload();
 			DynamicBanCache.reloadAll();
-			cs.sendMessage(DynamicBan.tag + ChatColor.GREEN + "Reload successful!");
-			cs.sendMessage(DynamicBan.tag + ChatColor.GREEN + "The following were reloaded:");
-			cs.sendMessage(DynamicBan.tag + ChatColor.GREEN + "DynamicBan Database");
-			cs.sendMessage(DynamicBan.tag + ChatColor.GREEN + "Configuration");
+			cs.sendMessage(plugin.getTag() + ChatColor.GREEN + "Reload successful!");
+			cs.sendMessage(plugin.getTag() + ChatColor.GREEN + "The following were reloaded:");
+			cs.sendMessage(plugin.getTag() + ChatColor.GREEN + "DynamicBan Database");
+			cs.sendMessage(plugin.getTag() + ChatColor.GREEN + "Configuration");
 		}
 		return true;
 	}

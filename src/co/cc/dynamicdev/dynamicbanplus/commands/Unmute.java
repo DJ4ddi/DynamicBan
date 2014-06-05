@@ -1,5 +1,7 @@
 package co.cc.dynamicdev.dynamicbanplus.commands;
 
+import java.util.UUID;
+
 import net.milkbowl.vault.permission.Permission;
 
 import org.bukkit.ChatColor;
@@ -25,15 +27,11 @@ public class Unmute implements CommandExecutor {
 	@Override
 	public boolean onCommand(CommandSender cs, Command cmd, String alias, String[] args) {
 		if (cmd.getName().equalsIgnoreCase("dynunmute")) {
-			if (cs instanceof Player) {
-				if (!(DynamicBan.permission.has(cs, "dynamicban.unmute") || cs.isOp())) {
-					cs.sendMessage(DynamicBan.tag + ChatColor.RED + "Sorry, you do not have the permission to use that command!");
-					return true;
-				}
-			}
+			if (!plugin.permissionCheck(cs, "unmute")) return true;
+			
 			if (args.length < 1) {
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Usage: /" + cmd.getAliases().toString() + " [Name]");
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Unmute the player specified.");
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Usage: /" + cmd.getAliases().toString() + " [Name]");
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Unmute the player specified.");
 				return true;
 			}
 			if (args[0].endsWith("*")) {
@@ -43,22 +41,25 @@ public class Unmute implements CommandExecutor {
 				}
 			}
 			
-			Player playertomute = plugin.getServer().getPlayerExact(args[0]);
-			String playermuted = args[0].toLowerCase();
-			if (DynamicBanCache.getMute(playermuted) != null) {
-				DynamicBanCache.removeMute(playermuted);
-				if (playertomute != null) {
-					playertomute.sendMessage(DynamicBan.tag + plugin.getConfig().getString("messages.unmute_message").replace("{SENDER}", cs.getName()).replaceAll("(&([a-f0-9k-or]))", "\u00A7$2"));
-					if (plugin.getConfig().getBoolean("config.broadcast_on_unmute")) {
-						plugin.getServer().broadcastMessage(plugin.getConfig().getString("broadcast_messages.unmute_message").replace("{PLAYER}", playertomute.getName()).replace("{SENDER}", cs.getName()).replaceAll("(&([a-f0-9k-or]))", "\u00A7$2"));
-					}
-				} else {
-					if (plugin.getConfig().getBoolean("config.broadcast_on_unmute")) {
-						plugin.getServer().broadcastMessage(plugin.getConfig().getString("broadcast_messages.unmute_message").replace("{PLAYER}", playermuted).replace("{SENDER}", cs.getName()).replaceAll("(&([a-f0-9k-or]))", "\u00A7$2"));
-					}
+			UUID pid = plugin.getUuidAsynch(args[0], plugin.createDelayedCommand(cs, cmd.getName(), args, args[0]));
+			if (pid == null) return true;
+			
+			if (DynamicBanCache.getMute(pid) != null) {
+				DynamicBanCache.removeMute(pid);
+				Player targetPlayer = plugin.getServer().getPlayer(pid);
+				if (targetPlayer != null) {
+					targetPlayer.getPlayer().sendMessage(plugin.getTag() + plugin.getConfig().getString("messages.unmute_message")
+							.replace("{SENDER}", cs.getName())
+							.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2"));
+				}
+				if (plugin.getConfig().getBoolean("config.broadcast_on_unmute")) {
+					plugin.getServer().broadcastMessage(plugin.getConfig().getString("broadcast_messages.unmute_message")
+							.replace("{PLAYER}", args[0])
+							.replace("{SENDER}", cs.getName())
+							.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2"));
 				}
 			} else {
-				cs.sendMessage(DynamicBan.tag + ChatColor.RED + "That player is not muted");
+				cs.sendMessage(plugin.getTag() + ChatColor.RED + "That player is not muted");
 			}
 		}
 		return true;

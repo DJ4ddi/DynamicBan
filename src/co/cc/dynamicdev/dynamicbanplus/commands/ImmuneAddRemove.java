@@ -1,5 +1,7 @@
 package co.cc.dynamicdev.dynamicbanplus.commands;
 
+import java.util.UUID;
+
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -23,17 +25,17 @@ public class ImmuneAddRemove implements CommandExecutor {
 	@Override
 	public boolean onCommand(CommandSender cs, Command cmd, String alias, String[] args) {
 		if (args.length < 2) {
-			if (DynamicBan.permission.has(cs, "dynamicban.immune.add") || DynamicBan.permission.has(cs, "dynamicban.immune.remove") || cs.isOp()) {
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Usage: /" + cmd.getAliases().toString() + " [add/remove] [name]");
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Add/remove the specified player from the immune list.");
+			if (plugin.getPermission().has(cs, "dynamicban.immune.add") || plugin.getPermission().has(cs, "dynamicban.immune.remove") || cs.isOp()) {
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Usage: /" + cmd.getAliases().toString() + " [add/remove] [name]");
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Add/remove the specified player from the immune list.");
 				return true;
 			} else {
-				cs.sendMessage(DynamicBan.tag + ChatColor.RED + "Sorry, you do not have the permission to use that command!");
+				cs.sendMessage(plugin.getTag() + ChatColor.RED + "Sorry, you do not have the permission to use that command!");
 				return true;
 			}
 		}
 		if (!(args[0].contains("add") || args[0].contains("remove"))) {
-			cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Invalid arguments, use /" + alias + " for more information.");
+			cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Invalid arguments, use /" + alias + " for more information.");
 			return true;
 		}
 		if (args[1].endsWith("*")) {
@@ -42,42 +44,46 @@ public class ImmuneAddRemove implements CommandExecutor {
 				return true;
 			}
 		}
-		if (args[0].equalsIgnoreCase("add") && DynamicBanCache.isImmune(args[1].toLowerCase())) {
-			cs.sendMessage(DynamicBan.tag + ChatColor.RED + "That player is already immune!");
+		
+		UUID pid = plugin.getUuidAsynch(args[1], plugin.createDelayedCommand(cs, cmd.getName(), args, args[1]));
+		if (pid == null) return true;
+		
+		if (args[0].equalsIgnoreCase("add") && DynamicBanCache.isImmune(pid)) {
+			cs.sendMessage(plugin.getTag() + ChatColor.RED + "That player is already immune!");
 			return true;
 		}
-		if (args[0].equalsIgnoreCase("remove") && !DynamicBanCache.isImmune(args[1].toLowerCase())) {
-			cs.sendMessage(DynamicBan.tag + ChatColor.RED + "That player is not immune!");
+		if (args[0].equalsIgnoreCase("remove") && !DynamicBanCache.isImmune(pid)) {
+			cs.sendMessage(plugin.getTag() + ChatColor.RED + "That player is not immune!");
 			return true;
 		}
 
 		if (cmd.getName().equalsIgnoreCase("dynimmune")) {
 			if (cs instanceof Player) {
-				if (DynamicBan.permission.has(cs, "dynamicban.immune.add") || cs.isOp()) {
+				if (plugin.getPermission().has(cs, "dynamicban.immune.add") || cs.isOp()) {
 					if (args[0].equalsIgnoreCase("add")) {
-						DynamicBanCache.addImmunity(args[1].toLowerCase(), cs.getName().toLowerCase());
-						cs.sendMessage(DynamicBan.tag + ChatColor.GREEN + args[1] + " has been added to the list of immune players!");
+						DynamicBanCache.addImmunity(pid, cs.getName().toLowerCase());
+						cs.sendMessage(plugin.getTag() + ChatColor.GREEN + args[1] + " has been added to the list of immune players!");
 						return true;
 					} else if (args[0].equalsIgnoreCase("remove")) {
-						if(DynamicBan.permission.has(cs, "dynamicban.immune.remove")){
-							DynamicBanCache.removeImmunity(args[1].toLowerCase());
-							cs.sendMessage(DynamicBan.tag + ChatColor.GREEN + args[1] + " has been removed from the of immune players!");
+						if(plugin.getPermission().has(cs, "dynamicban.immune.remove")){
+							DynamicBanCache.removeImmunity(pid);
+							cs.sendMessage(plugin.getTag() + ChatColor.GREEN + args[1] + " has been removed from the of immune players!");
 							return true;
 						} else {
-							cs.sendMessage(DynamicBan.tag + ChatColor.RED + "Sorry, you do not have the permission to use that command!");
+							cs.sendMessage(plugin.getTag() + ChatColor.RED + "Sorry, you do not have the permission to use that command!");
 						}
 					}
 				} else {
-					cs.sendMessage(DynamicBan.tag + ChatColor.RED + "Sorry, you do not have the permission to use that command!");
+					cs.sendMessage(plugin.getTag() + ChatColor.RED + "Sorry, you do not have the permission to use that command!");
 				}
 			} else {
 				if (args[0].equalsIgnoreCase("add")) {
-					DynamicBanCache.addImmunity(args[1].toLowerCase(), cs.getName().toLowerCase());
-					cs.sendMessage(DynamicBan.tag + ChatColor.GREEN + args[1] + " has been added to the list of immune players!");
+					DynamicBanCache.addImmunity(pid, cs.getName().toLowerCase());
+					cs.sendMessage(plugin.getTag() + ChatColor.GREEN + args[1] + " has been added to the list of immune players!");
 					return true;
 				} else if (args[0].equalsIgnoreCase("remove")) {
-					DynamicBanCache.removeImmunity(args[1].toLowerCase());
-					cs.sendMessage(DynamicBan.tag + ChatColor.GREEN + args[1] + " has been removed from the list of immune players!");
+					DynamicBanCache.removeImmunity(pid);
+					cs.sendMessage(plugin.getTag() + ChatColor.GREEN + args[1] + " has been removed from the list of immune players!");
 					return true;
 				}
 			}

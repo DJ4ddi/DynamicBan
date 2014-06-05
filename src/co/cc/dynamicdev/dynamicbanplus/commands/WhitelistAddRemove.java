@@ -1,10 +1,11 @@
 package co.cc.dynamicdev.dynamicbanplus.commands;
 
+import java.util.UUID;
+
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
 
 import co.cc.dynamicdev.dynamicbanplus.DynamicBan;
 import co.cc.dynamicdev.dynamicbanplus.DynamicBanCache;
@@ -22,17 +23,17 @@ public class WhitelistAddRemove implements CommandExecutor {
 	@Override
 	public boolean onCommand(CommandSender cs, Command cmd, String alias, String[] args) {
 		if (args.length < 2) {
-			if (DynamicBan.permission.has(cs, "dynamicban.whitelist.add") || DynamicBan.permission.has(cs, "dynamicban.whitelist.remove") || cs.isOp()) {
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Usage: /" + cmd.getAliases().toString() + " [add/remove] [Name/IP/IP-Range]");
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Add/remove the specified player from the whitelist.");
+			if (plugin.getPermission().has(cs, "dynamicban.whitelist.add") || plugin.getPermission().has(cs, "dynamicban.whitelist.remove") || cs.isOp()) {
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Usage: /" + cmd.getAliases().toString() + " [add/remove] [Name/IP/IP-Range]");
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Add/remove the specified player from the whitelist.");
 				return true;
 			} else {
-				cs.sendMessage(DynamicBan.tag + ChatColor.RED + "Sorry, you do not have the permission to use that command!");
+				cs.sendMessage(plugin.getTag() + ChatColor.RED + "Sorry, you do not have the permission to use that command!");
 				return true;
 			}
 		}
 		if (!(args[0].contains("add") || args[0].contains("remove"))) {
-			cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Invalid arguments, use /" + alias + " for more information.");
+			cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Invalid arguments, use /" + alias + " for more information.");
 			return true;
 		}
 		if (args[1].endsWith("*")) {
@@ -41,43 +42,37 @@ public class WhitelistAddRemove implements CommandExecutor {
 				return true;
 			}
 		}
-		if (args[0].equalsIgnoreCase("add") && DynamicBanCache.isWhitelisted(args[1].toLowerCase())) {
-			cs.sendMessage(DynamicBan.tag + ChatColor.RED + "That player is already whitelisted!");
+		
+		boolean isIp = false;
+		UUID pid = null;
+		if(args[0].matches("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}")) {
+			isIp = true;
+		} else {
+			pid = plugin.getUuidAsynch(args[0], plugin.createDelayedCommand(cs, cmd.getName(), args, args[0]));
+			if (pid == null) return true;
+		}
+		
+		if (args[0].equalsIgnoreCase("add") && DynamicBanCache.isWhitelisted((isIp) ? args[1] : pid)) {
+			cs.sendMessage(plugin.getTag() + ChatColor.RED + "That player is already whitelisted!");
 			return true;
 		}
-		if (args[0].equalsIgnoreCase("remove") && !DynamicBanCache.isWhitelisted(args[1].toLowerCase())) {
-			cs.sendMessage(DynamicBan.tag + ChatColor.RED + "That player is not whitelisted!");
+		if (args[0].equalsIgnoreCase("remove") && !DynamicBanCache.isWhitelisted((isIp) ? args[1] : pid)) {
+			cs.sendMessage(plugin.getTag() + ChatColor.RED + "That player is not whitelisted!");
 			return true;
 		}
 
-		if (cs instanceof Player) {
-			if (DynamicBan.permission.has(cs, "dynamicban.whitelist.add") || cs.isOp()) {
-				if (args[0].equalsIgnoreCase("add")) {
-					DynamicBanCache.addWhitelisted(args[1].toLowerCase().replace(".", "/"), cs.getName().toLowerCase());
-					cs.sendMessage(DynamicBan.tag + ChatColor.GREEN + args[1] + " has been added to the whitelist!");
-					return true;
-				} else if (args[0].equalsIgnoreCase("remove")) {
-					if(DynamicBan.permission.has(cs, "dynamicban.whitelist.remove")){
-						DynamicBanCache.removeWhitelisted(args[1].toLowerCase().replace(".", "/"));
-						cs.sendMessage(DynamicBan.tag + ChatColor.GREEN + args[1] + " has been removed from the whitelist!");
-						return true;
-					}else{
-						cs.sendMessage(DynamicBan.tag + ChatColor.RED + "Sorry, you do not have the permission to use that command!");
-					}
-				}
+		if (args[0].equalsIgnoreCase("add")) {
+			if (plugin.getPermission().has(cs, "dynamicban.whitelist.add") || cs.isOp()) {
+				DynamicBanCache.addWhitelisted((isIp) ? args[1] : pid, cs.getName());
+				cs.sendMessage(plugin.getTag() + ChatColor.GREEN + args[1] + " has been added to the whitelist!");
 			} else {
-				cs.sendMessage(DynamicBan.tag + ChatColor.RED + "Sorry, you do not have the permission to use that command!");
+				cs.sendMessage(plugin.getTag() + ChatColor.RED + "Sorry, you do not have the permission to use that command!");
 			}
+		} else if (plugin.getPermission().has(cs, "dynamicban.whitelist.remove")) {
+			DynamicBanCache.removeWhitelisted((isIp) ? args[1] : pid);
+			cs.sendMessage(plugin.getTag() + ChatColor.GREEN + args[1] + " has been removed from the whitelist!");
 		} else {
-			if (args[0].equalsIgnoreCase("add")) {
-				DynamicBanCache.addWhitelisted(args[1].toLowerCase().replace(".", "/"), cs.getName().toLowerCase());
-				cs.sendMessage(DynamicBan.tag + ChatColor.GREEN + args[1] + " has been added to the whitelist!");
-				return true;
-			} else if (args[0].equalsIgnoreCase("remove")) {
-				DynamicBanCache.removeWhitelisted(args[1].toLowerCase().replace(".", "/"));
-				cs.sendMessage(DynamicBan.tag + ChatColor.GREEN + args[1] + " has been removed from the whitelist!");
-				return true;
-			}
+			cs.sendMessage(plugin.getTag() + ChatColor.RED + "Sorry, you do not have the permission to use that command!");
 		}
 		return true;
 	}

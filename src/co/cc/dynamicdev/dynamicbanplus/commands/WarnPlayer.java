@@ -9,6 +9,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.UUID;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -36,15 +37,11 @@ public class WarnPlayer implements CommandExecutor {
 
 	@Override
 	public boolean onCommand(CommandSender cs, Command cmd, String alias, String[] args) {
-		if (cs instanceof Player) {
-			if (!(DynamicBan.permission.has(cs, "dynamicban.warn") || cs.isOp())) {
-				cs.sendMessage(DynamicBan.tag + ChatColor.RED + "Sorry, you do not have the permission to use that command!");
-				return true;
-			}
-		}
+		if (!plugin.permissionCheck(cs, "warn")) return true;
+		
 		if (args.length == 0) {
-			cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Usage: /" + cmd.getAliases().toString() + " [Name] (Reason)");
-			cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Warn the player specified, with an optional reason");
+			cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Usage: /" + cmd.getAliases().toString() + " [Name] (Reason)");
+			cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Warn the player specified, with an optional reason");
 			return true;
 		}
 		if (args[0].endsWith("*")) {
@@ -53,17 +50,22 @@ public class WarnPlayer implements CommandExecutor {
 				return true;
 			}
 		}
-		if(DynamicBanCache.isImmune(args[0].toLowerCase()) && plugin.getConfig().getBoolean("config.op_immune_bypass") == true && cs.isOp()){
-			cs.sendMessage(DynamicBan.tag + ChatColor.RED + "Since you are OP, you bypassed " + args[0] + "'s immunity.");
-		} else {
-			if (DynamicBanCache.isImmune(args[0].toLowerCase())) {
-				cs.sendMessage(DynamicBan.tag + ChatColor.RED + "Sorry, that player is immune to your command!");
+		
+		UUID pid = plugin.getUuidAsynch(args[0], plugin.createDelayedCommand(cs, cmd.getName(), args, args[0]));
+		if (pid == null) return true;
+		
+		if (DynamicBanCache.isImmune(pid)) {
+			if (plugin.getConfig().getBoolean("config.op_immune_bypass") == true && cs.isOp()) {
+				cs.sendMessage(plugin.getTag() + ChatColor.RED + "Since you are OP, you bypassed " + args[0] + "'s immunity.");
+			} else {
+				cs.sendMessage(plugin.getTag() + ChatColor.RED + "Sorry, that player is immune to your command!");
 				return true;
 			}
 		}
+		
 		SimpleDateFormat sdf = new SimpleDateFormat("EEE, MMM d, yyyy '@' HH:mm:ss");
 		Calendar now = Calendar.getInstance();
-		playerDataFile = new File("plugins/DynamicBan/playerdata/" + args[0].toLowerCase() + "/", "player.dat");
+		playerDataFile = new File("plugins/DynamicBan/playerdata/" + pid + "/", "player.dat");
 		if (playerDataFile.exists()) {
 			YamlConfiguration playerData = YamlConfiguration.loadConfiguration(playerDataFile);
 			playerData.options().copyDefaults(true);
@@ -104,38 +106,43 @@ public class WarnPlayer implements CommandExecutor {
 				e.printStackTrace();
 			}
 
-			Player playertowarn = plugin.getServer().getPlayerExact(args[0]);
-			String pname;
-			if (playertowarn != null) {
-				String warnMsg = plugin.getConfig().getString("other_messages.warned_message").replace("{REASON}", warnReason).replace("{SENDER}", cs.getName()).replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
-				playertowarn.sendMessage(DynamicBan.tag + warnMsg);
-				playertowarn.sendMessage(DynamicBan.tag + ChatColor.RED + "You have " + currentWarns + " warnings!");
-				cs.sendMessage(DynamicBan.tag + ChatColor.RED + "You warned " + args[0] + " for " + warnReason);
-				pname = playertowarn.getName();
-			} else {
-				pname = args[0];
+			Player targetPlayer = plugin.getServer().getPlayer(pid);
+			if (targetPlayer != null) {
+				String warnMsg = plugin.getConfig().getString("other_messages.warned_message")
+						.replace("{REASON}", warnReason)
+						.replace("{SENDER}", cs.getName())
+						.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
+				targetPlayer.sendMessage(plugin.getTag() + warnMsg);
+				targetPlayer.sendMessage(plugin.getTag() + ChatColor.RED + "You have " + currentWarns + " warnings!");
+				cs.sendMessage(plugin.getTag() + ChatColor.RED + "You warned " + args[0] + " for " + warnReason);
 			}
 
 			if (plugin.getConfig().getBoolean("config.broadcast_on_warn") != false) {
-				String broadcastMessage = plugin.getConfig().getString("broadcast_messages.warn_message").replace("{PLAYER}", pname).replace("{REASON}", warnReason).replace("{SENDER}", cs.getName()).replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
+				String broadcastMessage = plugin.getConfig().getString("broadcast_messages.warn_message")
+						.replace("{PLAYER}", playerData.getString("DisplayName"))
+						.replace("{REASON}", warnReason)
+						.replace("{SENDER}", cs.getName())
+						.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
 				plugin.getServer().broadcastMessage(broadcastMessage);
 			}
 
 			for (String s : plugin.getConfig().getConfigurationSection("config.warn_results").getKeys(false)) {
 				int warn = Integer.valueOf(s);
 				if (currentWarns == warn) {
-					String command = plugin.getConfig().getString("config.warn_results." + s).replace("{PLAYER}", args[0]).replace("{REASON}", warnReason);
+					String command = plugin.getConfig().getString("config.warn_results." + s)
+							.replace("{PLAYER}", playerData.getString("DisplayName"))
+							.replace("{REASON}", warnReason);
 					try {
-						if (!Bukkit.getServer().dispatchCommand(cs, command)) {
-							cs.sendMessage(DynamicBan.tag + ChatColor.RED + "The command " + command + " was not found.");
+						if (!plugin.getServer().dispatchCommand(cs, command)) {
+							cs.sendMessage(plugin.getTag() + ChatColor.RED + "The command " + command + " was not found.");
 						}
 					} catch (CommandException e) {
-						cs.sendMessage(DynamicBan.tag + ChatColor.RED + "The command " + command + " could not be executed.");
+						cs.sendMessage(plugin.getTag() + ChatColor.RED + "The command " + command + " could not be executed.");
 					}
 				}
 			}
 		} else {
-			cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "No data exists for the specified player!");
+			cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "No data exists for the specified player!");
 		}
 		return true;
 	}

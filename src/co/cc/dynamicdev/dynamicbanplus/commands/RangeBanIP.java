@@ -3,6 +3,7 @@ package co.cc.dynamicdev.dynamicbanplus.commands;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.UUID;
 
 import net.milkbowl.vault.permission.Permission;
 
@@ -32,19 +33,15 @@ public class RangeBanIP implements CommandExecutor {
 	@Override
 	public boolean onCommand(CommandSender cs, Command cmd, String alias, String[] args) {
 		if (cmd.getName().equalsIgnoreCase("dynrangeban")) {
-			if (cs instanceof Player) {
-				if (!(DynamicBan.permission.has(cs, "dynamicban.ban.range")|| cs.isOp())) {
-					cs.sendMessage(DynamicBan.tag + ChatColor.RED + "Sorry, you do not have the permission to use that command!");
-					return true;
-				}
-			}
+			if (!plugin.permissionCheck(cs, "ban.range")) return true;
+			
 			if (args.length < 2) {
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Usage: /" + cmd.getAliases().toString() + " [Name] level:[1/2/3] (Reason)");
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Range-Ban the player specified, with an optional reason");
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Usage: /" + cmd.getAliases().toString() + " [Name] level:[1/2/3] (Reason)");
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Range-Ban the player specified, with an optional reason");
 				return true;
 			}
 			if (!(args[1].contains("level:1") || args[1].contains("level:2") || args[1].contains("level:3"))) {
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Invalid level, use /" + alias + " for more information.");
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Invalid level, use /" + alias + " for more information.");
 				return true;
 			}
 			if (args[0].endsWith("*")) {
@@ -53,19 +50,23 @@ public class RangeBanIP implements CommandExecutor {
 					return true;
 				}
 			}
-			if (DynamicBanCache.isImmune(args[0].toLowerCase()) && plugin.getConfig().getBoolean("config.op_immune_bypass") == true && cs.isOp()) {
-				cs.sendMessage(DynamicBan.tag + ChatColor.RED + "Since you are OP, you bypassed " + args[0] + "'s immunity.");
-			} else {
-				if (DynamicBanCache.isImmune(args[0].toLowerCase())) {
-					cs.sendMessage(DynamicBan.tag + ChatColor.RED + "Sorry, that player is immune to your command!");
+			
+			UUID pid = plugin.getUuidAsynch(args[0], plugin.createDelayedCommand(cs, cmd.getName(), args, args[0]));
+			if (pid == null) return true;
+			
+			if (DynamicBanCache.isImmune(pid)) {
+				if (plugin.getConfig().getBoolean("config.op_immune_bypass") == true && cs.isOp()) {
+					cs.sendMessage(plugin.getTag() + ChatColor.RED + "Since you are OP, you bypassed " + args[0] + "'s immunity.");
+				} else {
+					cs.sendMessage(plugin.getTag() + ChatColor.RED + "Sorry, that player is immune to your command!");
 					return true;
 				}
 			}
-			playerDataFile = new File("plugins/DynamicBan/playerdata/" + args[0].toLowerCase() + "/", "player.dat");
+			
+			playerDataFile = new File("plugins/DynamicBan/playerdata/" + pid + "/", "player.dat");
 			YamlConfiguration playerData = YamlConfiguration.loadConfiguration(playerDataFile);
 			if (playerDataFile.exists()) {
 				String iptoban = playerData.getString("IP-Address").replace(".", "/");
-				Player playertoban = plugin.getServer().getPlayerExact(args[0]);
 				String banReason;
 				String broadcastReason;
 				String afterBanReason;
@@ -83,34 +84,41 @@ public class RangeBanIP implements CommandExecutor {
 					broadcastReason = afterBanReason;
 				}
 				if (args.length < 3) {
-					banReason = plugin.getConfig().getString("messages.rangeban_message").replace("{REASON}", plugin.getConfig().getString("other_messages.default_reason")).replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
+					banReason = plugin.getConfig().getString("messages.rangeban_message")
+							.replace("{REASON}", plugin.getConfig().getString("other_messages.default_reason"))
+							.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
 				} else {
-					banReason = plugin.getConfig().getString("messages.rangeban_message").replace("{REASON}", afterBanReason).replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
+					banReason = plugin.getConfig().getString("messages.rangeban_message")
+							.replace("{REASON}", afterBanReason)
+							.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
 				}
 				String[] RBIP = iptoban.split("/");
 				if(args[1].contains("level:1")){
-					DynamicBanCache.addRangeBan(RBIP[0] + "/" + RBIP[1] + "/" + RBIP[2] + "/" + "*", afterBanReason, cs.getName(), date, iptoban);
+					DynamicBanCache.addRangeBan(RBIP[0] + "/" + RBIP[1] + "/" + RBIP[2] + "/" + "*", afterBanReason, cs.getName(), date);
 				}
 				if(args[1].contains("level:2")){
-					DynamicBanCache.addRangeBan(RBIP[0] + "/" + RBIP[1] + "/" + "*" + "/" + "*", afterBanReason, cs.getName(), date, iptoban);
+					DynamicBanCache.addRangeBan(RBIP[0] + "/" + RBIP[1] + "/" + "*" + "/" + "*", afterBanReason, cs.getName(), date);
 				}
 				if(args[1].contains("level:3")){
-					DynamicBanCache.addRangeBan(RBIP[0] + "/" + "*" + "/" + "*" + "/" + "*", afterBanReason, cs.getName(), date, iptoban);
+					DynamicBanCache.addRangeBan(RBIP[0] + "/" + "*" + "/" + "*" + "/" + "*", afterBanReason, cs.getName(), date);
 				}
-				String pname;
-				if (playertoban != null) {
-					playertoban.kickPlayer(banReason);
-					pname = playertoban.getName();
-				} else {
-					pname = args[0];
+				
+				Player targetPlayer = plugin.getServer().getPlayer(pid);
+				if (targetPlayer != null) {
+					targetPlayer.kickPlayer(banReason);
 				}
+				
 				if (plugin.getConfig().getBoolean("config.broadcast_on_rangeban") != false) {
-					String broadcastMessage = plugin.getConfig().getString("broadcast_messages.rangeban_message").replace("{PLAYER}", pname).replace("{SENDER}", cs.getName()).replace("{REASON}", broadcastReason).replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
+					String broadcastMessage = plugin.getConfig().getString("broadcast_messages.rangeban_message")
+							.replace("{PLAYER}", playerData.getString("DisplayName"))
+							.replace("{SENDER}", cs.getName())
+							.replace("{REASON}", broadcastReason)
+							.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
 					plugin.getServer().broadcastMessage(broadcastMessage);
 					return true;
 				}
 			} else {
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + args[0] + " has no data stored!");
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + args[0] + " has no data stored!");
 			}
 		}
 		return true;

@@ -1,14 +1,13 @@
 package co.cc.dynamicdev.dynamicbanplus.commands;
 
 import java.io.File;
+import java.util.UUID;
 
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
 
 import co.cc.dynamicdev.dynamicbanplus.DynamicBan;
 import co.cc.dynamicdev.dynamicbanplus.DynamicBanCache;
@@ -27,62 +26,70 @@ public class UnbanPlayerIP implements CommandExecutor {
 	@Override
 	public boolean onCommand(CommandSender cs, Command cmd, String alias, String[] args) {
 		if (cmd.getName().equalsIgnoreCase("dynunbanip")) {
-			if (cs instanceof Player) {
-				if (!(DynamicBan.permission.has(cs, "dynamicban.unban.ip") || cs.isOp())) {
-					cs.sendMessage(DynamicBan.tag + ChatColor.RED +"Sorry, you do not have the permission to use that command!");
-					return true;
-				}
-			}
+			if (!plugin.permissionCheck(cs, "unban.ip")) return true;
+			
 			if (args.length == 0) {
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Usage: /" + cmd.getAliases().toString() + " [Name]");
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "Unban's a player's IP from the system.");
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Usage: /" + cmd.getAliases().toString() + " [Name]");
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Unban's a player's IP from the system.");
 				return true;
 			}
-			playerDataFile = new File("plugins/DynamicBan/playerdata/" + args[0].toLowerCase() + "/", "player.dat");
-			YamlConfiguration playerData = YamlConfiguration.loadConfiguration(playerDataFile);
+			
+			boolean isIp = false;
+			UUID pid = null;
+			if(args[0].matches("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}")) {
+				isIp = true;
+			} else {
+				pid = plugin.getUuidAsynch(args[0], plugin.createDelayedCommand(cs, cmd.getName(), args, args[0]));
+				if (pid == null) return true;
+			}
+			
 			boolean wasBanned = false;
-			if (playerDataFile.exists()) {
-				String playerip = playerData.getString("IP-Address").replace(".", "/");
-				if (Bukkit.getIPBans().contains(playerip.replace("/", "."))) {
-					wasBanned = true;
-					cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + args[0] + " is ip-banned by Bukkit, unbanning.");
-					plugin.getServer().unbanIP(playerip.replace("/", "."));
+			playerDataFile = new File("plugins/DynamicBan/playerdata/" + pid + "/", "player.dat");
+			if (playerDataFile.exists() || isIp) {
+				String pip;
+				String pname;
+				if (isIp) {
+					pip = args[0];
+					pname = args[0];
+				} else if (playerDataFile.exists()) {
+					YamlConfiguration playerData = YamlConfiguration.loadConfiguration(playerDataFile);
+					pname = playerData.getString("DisplayName");
+					pip = playerData.getString("IP-Address").replace(".", "/");
 				} else {
-					cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + args[0] + " is not ip-banned by Bukkit.");
+					cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "No data exists for the specified player!");
+					return true;
 				}
-				if (DynamicBanCache.getIpBan(playerip) != null) {
+
+				if (plugin.getServer().getIPBans().contains(pip.replace("/", "."))) {
 					wasBanned = true;
-					cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + args[0] + " has been ip-banned by DynamicBan, unbanning.");
-					DynamicBanCache.removeIpBan(playerip);
+					cs.sendMessage(plugin.getTag() + ChatColor.AQUA + pname + " is ip-banned by Bukkit, unbanning.");
+					plugin.getServer().unbanIP(pip.replace("/", "."));
 				} else {
-					cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + args[0] + " is not ip-banned by DynamicBan.");
+					cs.sendMessage(plugin.getTag() + ChatColor.AQUA + pname + " is not ip-banned by Bukkit.");
 				}
-				if (DynamicBanCache.getTempBan(playerip) != null) {
+				if (DynamicBanCache.getIpBan(pip) != null) {
 					wasBanned = true;
-					cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + args[0] + " has been temporarily ip-banned by DynamicBan, unbanning.");
-					DynamicBanCache.removeTempBan(playerip);
+					cs.sendMessage(plugin.getTag() + ChatColor.AQUA + pname + " has been ip-banned by DynamicBan, unbanning.");
+					DynamicBanCache.removeIpBan(pip);
 				} else {
-					cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + args[0] + " is not temporarily ip-banned by DynamicBan.");
+					cs.sendMessage(plugin.getTag() + ChatColor.AQUA + pname + " is not ip-banned by DynamicBan.");
+				}
+				if (DynamicBanCache.getTempBan(pip) != null) {
+					wasBanned = true;
+					cs.sendMessage(plugin.getTag() + ChatColor.AQUA + pname + " has been temporarily ip-banned by DynamicBan, unbanning.");
+					DynamicBanCache.removeTempBan(pip);
+				} else {
+					cs.sendMessage(plugin.getTag() + ChatColor.AQUA + pname + " is not temporarily ip-banned by DynamicBan.");
 				}
 				if (wasBanned) {
 					if (plugin.getConfig().getBoolean("config.broadcast_on_unban")) {
-						String broadcastMessage = plugin.getConfig().getString("broadcast_messages.unban_message").replace("{PLAYER}", playerData.getString("DisplayName")).replace("{SENDER}", cs.getName()).replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
+						String broadcastMessage = plugin.getConfig().getString("broadcast_messages.unban_message")
+								.replace("{PLAYER}", pname)
+								.replace("{SENDER}", cs.getName())
+								.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
 						plugin.getServer().broadcastMessage(broadcastMessage);
 					}
 				}
-			} else {
-				if (Bukkit.getIPBans().contains(args[0])) {
-					wasBanned = true;
-					cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + args[0] + " is ip-banned by Bukkit, unbanning.");
-					plugin.getServer().unbanIP(args[0]);
-					if (plugin.getConfig().getBoolean("config.broadcast_on_unban")) {
-						String broadcastMessage = plugin.getConfig().getString("broadcast_messages.unban_message").replace("{PLAYER}", args[0]).replace("{SENDER}", cs.getName()).replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
-						plugin.getServer().broadcastMessage(broadcastMessage);
-					}
-				} else {
-					cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + args[0] + " is not ip-banned by Bukkit.");
-				}
-				cs.sendMessage(DynamicBan.tag + ChatColor.AQUA + "No data exists for the specified player!");
 			}
 		}
 		return true;

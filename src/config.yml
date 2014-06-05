@@ -51,6 +51,8 @@ config:
     # Which DNSBL services do you want to be checked?
     dnsbl_result: none
     # What should happen when a blacklisted ip attempts to join? (none, kick, ban, ipban, notify)
+    convert_to_uuid: true
+    # Do you want to convert the database from names to UUIDs? (doing so will slow down the server startup significantly)
 messages:
     # Variables are {SENDER}, {REASON} and {TIME} for temporary actions
     kick_message: "You have been kicked. Reason: {REASON}"
