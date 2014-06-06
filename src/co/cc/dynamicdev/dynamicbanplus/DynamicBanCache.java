@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
@@ -53,7 +54,7 @@ public class DynamicBanCache {
 	private static FileConfiguration lockedipfile = YamlConfiguration.loadConfiguration(lockedipfilepath);
 
 	private static Map<UUID, String> currentips = new HashMap<UUID, String>();
-
+	
 	public static void loadAll() {
 		for (String s : bannedplayerfile.getKeys(false)) {
 			UUID p = UUID.fromString(s);
@@ -188,6 +189,13 @@ public class DynamicBanCache {
 		return count;
 	}
 	
+	public static UUID getOlderPlayerWithIp(String ip, UUID pid) {
+		for (Entry<UUID, String> e : currentips.entrySet())
+			if (e.getValue().equals(ip) && e.getKey() != pid)
+				return e.getKey();
+		return null;
+	}
+	
 	public static void setIp(UUID p, String ip) {
 		currentips.put(p, ip);
 	}
@@ -310,7 +318,7 @@ public class DynamicBanCache {
 		removeBan(range, bannedrangefile, bannedrangefilepath);
 	}
 	
-	public static void removeFromFile(String key, FileConfiguration file, File path) {
+	private static void removeFromFile(String key, FileConfiguration file, File path) {
 		if (file.contains(key)) {
 			file.set(key, null);
 			saveToFile(file, path);
@@ -337,7 +345,7 @@ public class DynamicBanCache {
 		removeFromFile("whitelist." + o.toString(), immuneplayerfile, immuneplayerfilepath);
 	}
 	
-	public static void saveToFile(FileConfiguration file, File path) {
+	private static void saveToFile(FileConfiguration file, File path) {
 		try {
 			file.save(path);
 		} catch(IOException e) {

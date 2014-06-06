@@ -184,25 +184,19 @@ public class MainListener extends AbstractListener {
 		if (config.getBoolean("config.broadcast_on_same_ip") == true) {
 			UUID pid = plugin.getUuidAsynch(event.getPlayer().getName());
 			String iptocheck = DynamicBanCache.getIp(pid);
-			if (iptocheck != null) {
-				if (DynamicBanCache.getLoggedIp(iptocheck) == null) {
-					DynamicBanCache.addLoggedIp(iptocheck, pid);
-				} else {
-					UUID olderPlayer = DynamicBanCache.getLoggedIp(iptocheck);
-					if (!(pid.equals(olderPlayer))) {
-						for (Player broadcastto: Bukkit.getServer().getOnlinePlayers()) {
-							if (plugin.getPermission().has(broadcastto, "dynamicban.check") || broadcastto.isOp()) {
-								String sameIPMsg = config.getString("other_messages.same_ip_message")
-										.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2")
-										.replace("{PLAYER}", event.getPlayer().getName())
-										.replace("{IP}", iptocheck.replace("/", "."))
-										.replace("{OLDERPLAYER}", Bukkit.getPlayer(olderPlayer).getName());
-								broadcastto.sendMessage(plugin.getTag() + sameIPMsg);
-							}
-						}  
-						Logger.getLogger(JavaPlugin.class.getName()).log(Level.INFO, plugin.getTag() + event.getPlayer().getName() + " logged in with the same IP (" + iptocheck.replace("/", ".") + ") as " + olderPlayer);
+			UUID olderPlayer = DynamicBanCache.getOlderPlayerWithIp(iptocheck, pid);
+			if (olderPlayer != null) {
+				for (Player broadcastto: Bukkit.getServer().getOnlinePlayers()) {
+					if (plugin.getPermission().has(broadcastto, "dynamicban.check") || broadcastto.isOp()) {
+						String sameIPMsg = config.getString("other_messages.same_ip_message")
+								.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2")
+								.replace("{PLAYER}", event.getPlayer().getName())
+								.replace("{IP}", iptocheck.replace("/", "."))
+								.replace("{OLDERPLAYER}", Bukkit.getPlayer(olderPlayer).getName());
+						broadcastto.sendMessage(plugin.getTag() + sameIPMsg);
 					}
-				}
+				}  
+				Logger.getLogger(JavaPlugin.class.getName()).log(Level.INFO, plugin.getTag() + event.getPlayer().getName() + " logged in with the same IP (" + iptocheck.replace("/", ".") + ") as " + olderPlayer);
 			}
 		}
 	}
