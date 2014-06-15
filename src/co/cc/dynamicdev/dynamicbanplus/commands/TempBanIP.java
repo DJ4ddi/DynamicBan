@@ -101,43 +101,47 @@ public class TempBanIP implements CommandExecutor {
 				broadcastReason = plugin.getConfig().getString("other_messages.default_reason");
 			}
 			playerDataFile = new File("plugins/DynamicBan/playerdata/" + pid + "/", "player.dat");
-			YamlConfiguration playerData = YamlConfiguration.loadConfiguration(playerDataFile);
-			String iptoban = playerData.getString("IP-Address").replace(".", "/");
-			String[] unit= args[1].split(":");
-			
-			long tempTimeFinal = System.currentTimeMillis() / 1000;
-			for (String s : unit) {
-				tempTimeFinal += parseTimeSpec(s.replaceAll("[mhdwts]", ""), s);
-			}
-
-			SimpleDateFormat sdf = new SimpleDateFormat("EEE, MMM d, yyyy '@' HH:mma");
-			DynamicBanCache.addTempBan(iptoban, tempTimeFinal + "::" + banReason, cs.getName(), sdf.format(new Date()));
-			plugin.getServer().banIP(iptoban.replace("/", "."));
-			
-			String timeBanned = args[1].replace(":", " ");
-			String banMessage = plugin.getConfig().getString("messages.ip_tempban_message")
-					.replace("{TIME}", timeBanned).replace("{REASON}", broadcastReason)
-					.replace("{SENDER}", cs.getName())
-					.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
-			
-			Player targetPlayer = plugin.getServer().getPlayer(pid);
-			if (targetPlayer != null) {
-				targetPlayer.kickPlayer(banMessage);
-			}
-			
-			if (valid) {
-				if (plugin.getConfig().getBoolean("config.broadcast_on_iptempban") != false) {
-					String broadcastMessage = plugin.getConfig().getString("broadcast_messages.ip_tempban_message")
-							.replace("{PLAYER}", args[0])
-							.replace("{TIME}", timeBanned)
-							.replace("{REASON}", broadcastReason)
-							.replace("{SENDER}", cs.getName())
-							.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
-					plugin.getServer().broadcastMessage(broadcastMessage);
+			if (playerDataFile.exists()) {
+				YamlConfiguration playerData = YamlConfiguration.loadConfiguration(playerDataFile);
+				String iptoban = playerData.getString("IP-Address").replace(".", "/");
+				String[] unit= args[1].split(":");
+				
+				long tempTimeFinal = System.currentTimeMillis() / 1000;
+				for (String s : unit) {
+					tempTimeFinal += parseTimeSpec(s.replaceAll("[mhdwts]", ""), s);
 				}
-				return true;
+
+				SimpleDateFormat sdf = new SimpleDateFormat("EEE, MMM d, yyyy '@' HH:mma");
+				DynamicBanCache.addTempBan(iptoban, tempTimeFinal + "::" + banReason, cs.getName(), sdf.format(new Date()));
+				plugin.getServer().banIP(iptoban.replace("/", "."));
+				
+				String timeBanned = args[1].replace(":", " ");
+				String banMessage = plugin.getConfig().getString("messages.ip_tempban_message")
+						.replace("{TIME}", timeBanned).replace("{REASON}", broadcastReason)
+						.replace("{SENDER}", cs.getName())
+						.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
+				
+				Player targetPlayer = plugin.getServer().getPlayer(pid);
+				if (targetPlayer != null) {
+					targetPlayer.kickPlayer(banMessage);
+				}
+				
+				if (valid) {
+					if (plugin.getConfig().getBoolean("config.broadcast_on_iptempban") != false) {
+						String broadcastMessage = plugin.getConfig().getString("broadcast_messages.ip_tempban_message")
+								.replace("{PLAYER}", args[0])
+								.replace("{TIME}", timeBanned)
+								.replace("{REASON}", broadcastReason)
+								.replace("{SENDER}", cs.getName())
+								.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
+						plugin.getServer().broadcastMessage(broadcastMessage);
+					}
+					return true;
+				} else {
+					cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Invalid time format, use /" + alias + " for more information.");
+				}
 			} else {
-				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + "Invalid time format, use /" + alias + " for more information.");
+				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + args[0] + " has no data stored!");
 			}
 		}
 		return true;

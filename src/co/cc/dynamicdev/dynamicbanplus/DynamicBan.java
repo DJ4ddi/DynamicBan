@@ -7,13 +7,12 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import net.milkbowl.vault.permission.Permission;
@@ -131,10 +130,16 @@ public class DynamicBan extends JavaPlugin implements Listener {
 	public void onEnable() {
 		this.log = new DynamicLogger(this);
 		
-		serverVersion = Integer.parseInt(Pattern
-				.compile("-b(\\d*?)jnks", Pattern.CASE_INSENSITIVE)
-				.matcher(Bukkit.getServer().getVersion())
-				.group(1));
+		try {
+			Matcher m = Pattern
+					.compile("-b(\\d+)jnks", Pattern.CASE_INSENSITIVE)
+					.matcher(getServer().getVersion());
+			if (m.find())
+				serverVersion = Integer.parseInt(m.group(1));
+			else throw new Exception();
+		} catch (Exception e) {
+			System.out.println("[DynamicBan] Server version couldn't be parsed");
+		}
 		
 		uuidCache = new UUIDCache(this, !getServer().getOnlineMode() || (serverVersion < 3043 && serverVersion != 0));
 		
@@ -202,7 +207,6 @@ public class DynamicBan extends JavaPlugin implements Listener {
 		getCommand("dynwhitelist").setExecutor(new WhitelistAddRemove(this));		
 		
 		System.out.println("[DynaminBan] has been enabled (v" + getDescription().getVersion() + ")");
-		System.out.println("[DynamicBan] Server version: " + getServer().getVersion());
 	}
 
 	@Override
@@ -299,39 +303,60 @@ public class DynamicBan extends JavaPlugin implements Listener {
 		System.out.println("Converting data...");
 		path = "plugins" + File.separator + "DynamicBan" + File.separator + "data";
 		
+		new File(path, "ip-log.dat").delete();
+		
 		File f = new File(path, "immune-players .dat");
 		f.renameTo(new File(path, "immune-players.dat"));
 		FileConfiguration immunePlayers = YamlConfiguration.loadConfiguration(f);
 		
-		HashMap<ConfigurationSection, Boolean> files = new HashMap<ConfigurationSection, Boolean>();
-		files.put(YamlConfiguration.loadConfiguration(new File(path, "banned-players.dat")), false);
-		files.put(YamlConfiguration.loadConfiguration(new File(path, "muted-players.dat")), false);
-		files.put(immunePlayers.getConfigurationSection("immune"), false);
-		files.put(YamlConfiguration.loadConfiguration(new File(path, "temp-bans.dat")), true);
-		files.put(YamlConfiguration.loadConfiguration(new File(path, "executors.dat")), true);
-		files.put(YamlConfiguration.loadConfiguration(new File(path, "timestamps.dat")), true);
-		files.put(immunePlayers.getConfigurationSection("whitelist"), true);
-		
 		List<String> invalidNames = new LinkedList<String>();
-		for (Entry<ConfigurationSection, Boolean> c : files.entrySet())
-			for (String s : convertFile(c.getKey(), c.getValue()))
-				if (!invalidNames.contains(s))
-					invalidNames.add(s);
+		try {
+			processFile(path, "banned-players.dat", false, invalidNames);
+			processFile(path, "muted-players.dat", false, invalidNames);
+			processFile(path, "temp-bans.dat", true, invalidNames);
+			processFile(path, "executors.dat", true, invalidNames);
+			processFile(path, "timestamps.dat", true, invalidNames);
+			processConfigurationSection(immunePlayers.getConfigurationSection("immune"), false, invalidNames);
+			processConfigurationSection(immunePlayers.getConfigurationSection("whitelist"), true, invalidNames);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		try {
+			immunePlayers.save(f);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		
 		System.out.println("The following names could not be converted: " + invalidNames.toString());
 		System.out.println("[DynamicBan] Conversion complete.");
 	}
 	
+	private void processFile(String path, String name, boolean mixedFile, List<String> invalidNames) throws IOException {
+		File f = new File(path, name);
+		FileConfiguration c = YamlConfiguration.loadConfiguration(f);
+		processConfigurationSection(c, mixedFile, invalidNames);
+		c.save(f);
+	}
+	
+	private void processConfigurationSection(ConfigurationSection c, boolean mixedFile, List<String> invalidNames) {
+		for (String s : convertFile(c, mixedFile))
+			if (!invalidNames.contains(s))
+				invalidNames.add(s);
+	}
+	
 	private List<String> convertFile(ConfigurationSection data, boolean mixedFile) {
 		List<String> invalidNames = new LinkedList<String>();
-		for (String s : data.getKeys(false)) {
-			if (mixedFile && s.matches("\\d{1,3}'\'\\d{1,3}'\'\\d{1,3}'\'\\d{1,3}")) continue;
-			UUID pid = uuidCache.getIdSynch(s);
-			if (pid != null)
-				data.set(pid.toString(), data.get(s));
-			else
-				invalidNames.add(s);
-			data.set(s, null);
+		if (data != null) {
+			for (String s : data.getKeys(false)) {
+				if (mixedFile && s.matches("\\d{1,3}/\\d{1,3}/\\d{1,3}/\\d{1,3}")) continue;
+				UUID pid = uuidCache.getIdSynch(s);
+				if (pid != null)
+					data.set(pid.toString(), data.get(s));
+				else
+					invalidNames.add(s);
+				data.set(s, null);
+			}
 		}
 		return invalidNames;
 	}
