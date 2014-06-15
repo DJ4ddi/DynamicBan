@@ -17,6 +17,8 @@ import java.util.regex.Pattern;
 
 import net.milkbowl.vault.permission.Permission;
 
+import org.bukkit.BanEntry;
+import org.bukkit.BanList;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -141,7 +143,7 @@ public class DynamicBan extends JavaPlugin implements Listener {
 			System.out.println("[DynamicBan] Server version couldn't be parsed");
 		}
 		
-		uuidCache = new UUIDCache(this, !getServer().getOnlineMode() || (serverVersion < 3043 && serverVersion != 0));
+		uuidCache = new UUIDCache(this, getServer().getOnlineMode(), serverVersion < 3043 && serverVersion != 0);
 		
 		getServer().getScheduler().runTaskAsynchronously(this, new Runnable() {
 			@Override
@@ -248,6 +250,14 @@ public class DynamicBan extends JavaPlugin implements Listener {
 		return null;
 	}
 	
+	@SuppressWarnings("deprecation")
+	public Player getPlayer(UUID pid) {
+		if (getServer().getOnlineMode())
+			return getServer().getPlayer(pid);
+		String name = uuidCache.getName(pid);
+		return (name == null) ? null : getServer().getPlayer(name);
+	}
+	
 	public UUID getUuidAsynch(String name, DelayedCommand command) {
 		return uuidCache.getIdAsynch(name, command);
 	}
@@ -297,8 +307,15 @@ public class DynamicBan extends JavaPlugin implements Listener {
 		
 		System.out.println("Removing old player data...");
 		String path = "plugins" + File.separator + "DynamicBan" + File.separator + "playerdata";
-		for (File f : new File(path).listFiles())
+		for (File f : new File(path).listFiles()) {
+			for (File fi : f.listFiles())
+				fi.delete();
 			f.delete();
+		}
+		
+		System.out.println("Clearing Bukkit ban lists...");
+		clearBanList(getServer().getBanList(BanList.Type.IP));
+		clearBanList(getServer().getBanList(BanList.Type.NAME));
 		
 		System.out.println("Converting data...");
 		path = "plugins" + File.separator + "DynamicBan" + File.separator + "data";
@@ -306,16 +323,20 @@ public class DynamicBan extends JavaPlugin implements Listener {
 		new File(path, "ip-log.dat").delete();
 		
 		File f = new File(path, "immune-players .dat");
-		f.renameTo(new File(path, "immune-players.dat"));
-		FileConfiguration immunePlayers = YamlConfiguration.loadConfiguration(f);
+		File fi = new File(path, "immune-players.dat");
+		if (!fi.exists())
+			f.renameTo(fi);
+		else if (f.exists())
+			f.delete();
+		FileConfiguration immunePlayers = YamlConfiguration.loadConfiguration(fi);
 		
 		List<String> invalidNames = new LinkedList<String>();
 		try {
 			processFile(path, "banned-players.dat", false, invalidNames);
 			processFile(path, "muted-players.dat", false, invalidNames);
 			processFile(path, "temp-bans.dat", true, invalidNames);
-			processFile(path, "executors.dat", true, invalidNames);
-			processFile(path, "timestamps.dat", true, invalidNames);
+			processFile(path, "banned-by.dat", true, invalidNames);
+			processFile(path, "ban-time.dat", true, invalidNames);
 			processConfigurationSection(immunePlayers.getConfigurationSection("immune"), false, invalidNames);
 			processConfigurationSection(immunePlayers.getConfigurationSection("whitelist"), true, invalidNames);
 		} catch (IOException e) {
@@ -323,13 +344,19 @@ public class DynamicBan extends JavaPlugin implements Listener {
 		}
 		
 		try {
-			immunePlayers.save(f);
+			immunePlayers.save(fi);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		
-		System.out.println("The following names could not be converted: " + invalidNames.toString());
+		if (!invalidNames.isEmpty())
+			System.out.println("The following names could not be converted: " + invalidNames.toString());
 		System.out.println("[DynamicBan] Conversion complete.");
+	}
+	
+	private void clearBanList(BanList b) {
+		for (BanEntry e : b.getBanEntries())
+			b.pardon(e.getTarget());
 	}
 	
 	private void processFile(String path, String name, boolean mixedFile, List<String> invalidNames) throws IOException {

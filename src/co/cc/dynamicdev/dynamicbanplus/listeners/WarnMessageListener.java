@@ -44,38 +44,40 @@ public class WarnMessageListener extends AbstractListener {
 	}
 	
 	private void sendWarnings(Player p) {
-		SimpleDateFormat sdf = new SimpleDateFormat("EEE, MMM d, yyyy '@' HH:mm:ss");
-		File playerDataFile = new File("plugins/DynamicBan/playerdata/" + p.getName().toLowerCase() + "/", "player.dat");
-		if (playerDataFile.exists()) {
-			FileConfiguration playerData = YamlConfiguration.loadConfiguration(playerDataFile);
-			int currentWarns = 0;
-			List<String> warns = new ArrayList<String>();
-			for (String s : playerData.getConfigurationSection("warns").getKeys(false)) {
-				Date date = null;
-				try {
-					date = sdf.parse(s);
-					Calendar warnendtime = Calendar.getInstance();
-					if (date != null) {
-						warnendtime.setTime(date);
-						warnendtime.add(Calendar.HOUR, timeout);
+		if (p.isOnline()) {
+			SimpleDateFormat sdf = new SimpleDateFormat("EEE, MMM d, yyyy '@' HH:mm:ss");
+			File playerDataFile = new File("plugins/DynamicBan/playerdata/" + plugin.getUuidAsynch(p.getName()) + "/", "player.dat");
+			if (playerDataFile.exists()) {
+				FileConfiguration playerData = YamlConfiguration.loadConfiguration(playerDataFile);
+				int currentWarns = 0;
+				List<String> warns = new ArrayList<String>();
+				for (String s : playerData.getConfigurationSection("warns").getKeys(false)) {
+					Date date = null;
+					try {
+						date = sdf.parse(s);
+						Calendar warnendtime = Calendar.getInstance();
+						if (date != null) {
+							warnendtime.setTime(date);
+							warnendtime.add(Calendar.HOUR, timeout);
+						}
+						if (!warnendtime.before(Calendar.getInstance()) || timeout <= 0) {
+							currentWarns++;
+							warns.add(s + " - " + playerData.getString("warns." + s));
+						}
+					} catch (ParseException e) {
+						plugin.getLogger().severe("Date " + s + " could not be parsed.");
 					}
-					if (!warnendtime.before(Calendar.getInstance()) || timeout <= 0) {
-						currentWarns++;
-						warns.add(s + " - " + playerData.getString("warns." + s));
-					}
-				} catch (ParseException e) {
-					plugin.getLogger().severe("Date " + s + " could not be parsed.");
 				}
-			}
-			if (currentWarns != 0) {
-				String message = warningMessage.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
-				if (!message.matches("(\u00A7([0-9a-fk-or]))*\\{WARNS\\}.*$"))
-					p.sendMessage(plugin.getTag() + message.split("(\u00A7([0-9a-fk-or])){0,2}\\{WARNS\\}")[0]
-							.replace("{AMOUNT}", String.valueOf(currentWarns)));
-				for (String s : warns)
-					p.sendMessage(warnFormat + s);
-				if (!message.endsWith("{WARNS}"))
-					p.sendMessage(message.split("\\{WARNS\\}")[1].replace("{AMOUNT}", String.valueOf(currentWarns)));
+				if (currentWarns != 0) {
+					String message = warningMessage.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
+					if (!message.matches("(\u00A7([0-9a-fk-or]))*\\{WARNS\\}.*$"))
+						p.sendMessage(plugin.getTag() + message.split("(\u00A7([0-9a-fk-or])){0,2}\\{WARNS\\}")[0]
+								.replace("{AMOUNT}", String.valueOf(currentWarns)));
+					for (String s : warns)
+						p.sendMessage(warnFormat + s);
+					if (!message.endsWith("{WARNS}"))
+						p.sendMessage(message.split("\\{WARNS\\}")[1].replace("{AMOUNT}", String.valueOf(currentWarns)));
+				}
 			}
 		}
 	}

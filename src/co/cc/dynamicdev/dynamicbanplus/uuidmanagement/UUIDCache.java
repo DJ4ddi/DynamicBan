@@ -1,6 +1,7 @@
 package co.cc.dynamicdev.dynamicbanplus.uuidmanagement;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
@@ -33,27 +34,38 @@ import co.cc.dynamicdev.dynamicbanplus.DynamicBan;
 public class UUIDCache implements Listener {
 	private static final UUID ZERO_UUID = UUID.fromString("00000000-0000-0000-0000-000000000000");
 	private Map<String, UUID> cache = new CaseInsensitiveConcurrentHashMap<UUID>();
-	private Map<String, DelayedCommand> commandQueue = new ConcurrentHashMap<String, DelayedCommand>();
+	private Map<UUID, String> reverseCache = null;
+	private Map<DelayedCommand, String> commandQueue = new ConcurrentHashMap<DelayedCommand, String>();
 	
 	private DynamicBan plugin;
 	private boolean alwaysFetchUuids;
 
-	public UUIDCache(DynamicBan plugin, boolean alwaysFetchUuids) {
+	public UUIDCache(DynamicBan plugin, boolean onlineMode, boolean compatibilityMode) {
 		Validate.notNull(plugin);
 		this.plugin = plugin;
-		this.alwaysFetchUuids = alwaysFetchUuids;
+		alwaysFetchUuids = !onlineMode || compatibilityMode;
+		if (!onlineMode)
+			reverseCache = new HashMap<UUID, String>();
 		plugin.getServer().getPluginManager().registerEvents(this, plugin);
 	}
 	
 	/**
-	 * Get the UUID from the cache for the player named 'name'.
+	 * Get the associated name for the given UUID from the cache.
 	 * 
-	 * If the id does not exist in our database, then we will queue a fetch to
-	 * get it, return null and queue the command that will be executed once
-	 * the fetch is finished.
+	 * @param uuid The UUID to search for.
+	 * @return The associated name if the UUID is stored, null otherwise.
+	 */
+	public String getName(UUID uuid) {
+		if (reverseCache != null)
+			return reverseCache.get(uuid);
+		return null;
+	}
+	
+	/**
+	 * Get the UUID from the cache for the player with the given name.
 	 * 
-	 * The asynchronous fetch will be repeated up to 3 times with a 10 second
-	 * delay.
+	 * If the id is not in the cache, then queue a fetch to get it, return null
+	 * and queue the command that will be executed once the fetch is finished.
 	 * 
 	 * @param name The player name to search for.
 	 * @return The UUID if it is already stored, null otherwise.
@@ -72,13 +84,12 @@ public class UUIDCache implements Listener {
 	}
 	
 	/**
-	 * Get the UUID from the cache for the player named 'name', with blocking get.
+	 * Get the UUID from the cache for the player with the given name, with
+	 * blocking get.
 	 *
-	 * If the player named is not in the cache, then we will fetch the UUID in
-	 * a blocking fashion. Note that this will block the thread until the fetch
-	 * is complete, so only use this in a thread or in special circumstances.
-	 * 
-	 * The synchronous fetch will not be repeated.
+	 * If the id is not in the cache, then fetch the UUID in a blocking
+	 * fashion. Note that this will block the thread until the fetch is
+	 * complete, so do not call this from the main thread.
 	 *
 	 * @param name The player name to search for.
 	 * @return The UUID of the player.
@@ -96,7 +107,7 @@ public class UUIDCache implements Listener {
 				return cache.get(name);
 			} else {
 				if (command != null)
-					commandQueue.put(name, command);
+					commandQueue.put(command, name);
 				ensurePlayerUUID(name);
 			}
 		} else if (uuid.equals(ZERO_UUID)) {
@@ -113,35 +124,36 @@ public class UUIDCache implements Listener {
 	
 	private void ensurePlayerUUID(Player p) {
 		if (cache.containsKey(p.getName())) return;
-		cache.put(p.getName(), p.getUniqueId());
+		put(p.getName(), p.getUniqueId());
 	}
 
 	private void asyncFetch(final ArrayList<String> names) {
 		plugin.getServer().getScheduler().runTaskAsynchronously(plugin, new Runnable() {
 			public void run() {
-				for (int i = 0; i < 3; i++) {
-					if (syncFetch(names)) break;
-					try {
-						Thread.sleep(5000L);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-				}
+				syncFetch(names);
 			}
 		});
 	}
 
-	private boolean syncFetch(ArrayList<String> names) {
+	@SuppressWarnings("deprecation")
+	private void syncFetch(ArrayList<String> names) {
 		final UUIDFetcher fetcher = new UUIDFetcher(names);
+		Map<String, UUID> newEntries = null;
 		try {
-			Map<String, UUID> newEntries = fetcher.call();
-			cache.putAll(newEntries);
+			newEntries = fetcher.call();
+		} catch (Exception e) {
+			if (plugin.getConfig().getBoolean("config.allow_offline_players")) {
+				newEntries = new HashMap<String, UUID>();
+				for (String s : names)
+					newEntries.put(s, plugin.getServer().getOfflinePlayer(s).getUniqueId());
+			}
+		}
+		
+		if (newEntries != null) {
+			for (Entry<String, UUID> e : newEntries.entrySet())
+				put(e.getKey(), e.getValue());			
 			executeDelayedCommand(names, newEntries.isEmpty());
 			scheduleCleanup(newEntries);
-			return true;
-		} catch (Exception e) {
-			e.printStackTrace();
-			return false;
 		}
 	}
 
@@ -149,8 +161,9 @@ public class UUIDCache implements Listener {
 		plugin.getServer().getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
 			public void run() {
 				for (Entry<String, UUID> e : entries.entrySet())
-					if (cache.containsKey(e.getKey()) && plugin.getServer().getPlayer(e.getValue()) == null)
-						cache.remove(e.getKey());
+					if (cache.containsKey(e.getKey()) && plugin.getPlayer(e.getValue()) == null) {
+						remove(e.getKey());
+					}
 			}
 		}, 12000L);
 	}
@@ -162,14 +175,28 @@ public class UUIDCache implements Listener {
 	}
 
 	private void executeDelayedCommand(ArrayList<String> names, boolean fail) {
-		DelayedCommand command;
-		for (String s : names) {
-			command = commandQueue.get(s);
-			if (command != null) {
-				if (fail) command.fail();
-				else command.succeed();
-			}
-		}
+		for (String s : names)
+			for (Entry<DelayedCommand, String> e : commandQueue.entrySet())
+				if (e.getValue().equalsIgnoreCase(s)) {
+					DelayedCommand c = e.getKey();
+					if (fail) c.fail();
+					else c.succeed();
+					commandQueue.remove(c);
+				}
+	}
+	
+	/* Replaces the cache.put(String key, UUID value) method */
+	private void put(String key, UUID value) {
+		cache.put(key, value);
+		if (reverseCache != null)
+			reverseCache.put(value, key);
+	}
+	
+	/* Replaces the cache.remove(String key) method */
+	private void remove(String key) {
+		if (reverseCache != null)
+			reverseCache.remove(cache.remove(key));
+		else cache.remove(key);
 	}
 
 	@EventHandler(priority = EventPriority.LOWEST)
@@ -180,6 +207,6 @@ public class UUIDCache implements Listener {
 
 	@EventHandler(priority = EventPriority.MONITOR)
 	void onPlayerQuit(PlayerQuitEvent event) {
-		cache.remove(event.getPlayer().getName());
+		remove(event.getPlayer().getName());
 	}
 }

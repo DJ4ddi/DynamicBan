@@ -42,7 +42,7 @@ public class DynamicBanCache {
 
 	private static ArrayList<UUID> immuneplayers = new ArrayList<UUID>();
 	private static ArrayList<String> whitelist = new ArrayList<String>();
-	private static final File immuneplayerfilepath = new File(path, "immune-players .dat");
+	private static final File immuneplayerfilepath = new File(path, "immune-players.dat");
 	private static FileConfiguration immuneplayerfile = YamlConfiguration.loadConfiguration(immuneplayerfilepath);
 
 	private static Map<UUID, String> mutedplayers = new HashMap<UUID, String>();

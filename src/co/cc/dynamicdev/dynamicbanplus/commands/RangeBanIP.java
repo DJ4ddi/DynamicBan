@@ -103,7 +103,7 @@ public class RangeBanIP implements CommandExecutor {
 					DynamicBanCache.addRangeBan(RBIP[0] + "/" + "*" + "/" + "*" + "/" + "*", afterBanReason, cs.getName(), date);
 				}
 				
-				Player targetPlayer = plugin.getServer().getPlayer(pid);
+				Player targetPlayer = plugin.getPlayer(pid);
 				if (targetPlayer != null) {
 					targetPlayer.kickPlayer(banReason);
 				}

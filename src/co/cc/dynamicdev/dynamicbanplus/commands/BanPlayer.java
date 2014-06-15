@@ -85,7 +85,7 @@ public class BanPlayer implements CommandExecutor {
 			DynamicBanCache.addPlayerBan(pid, afterBanReason, cs.getName(), date);
 			Bukkit.getBanList(BanList.Type.NAME).addBan(args[0], afterBanReason, null, cs.getName());
 			
-			Player targetPlayer = plugin.getServer().getPlayer(pid);
+			Player targetPlayer = plugin.getPlayer(pid);
 			if (targetPlayer != null) {
 				targetPlayer.kickPlayer(banReason);
 			}

@@ -192,7 +192,7 @@ public class MainListener extends AbstractListener {
 								.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2")
 								.replace("{PLAYER}", event.getPlayer().getName())
 								.replace("{IP}", iptocheck.replace("/", "."))
-								.replace("{OLDERPLAYER}", Bukkit.getPlayer(olderPlayer).getName());
+								.replace("{OLDERPLAYER}", plugin.getPlayer(olderPlayer).getName());
 						broadcastto.sendMessage(plugin.getTag() + sameIPMsg);
 					}
 				}  
@@ -212,16 +212,10 @@ public class MainListener extends AbstractListener {
 
 	@EventHandler(priority = EventPriority.HIGHEST)
 	void onPlayerQuit(PlayerQuitEvent event) {
-		final UUID pid = plugin.getUuidAsynch(event.getPlayer().getName());
-		plugin.getServer().getScheduler().runTask(plugin, new Runnable() {
-			@Override
-			public void run() {
-				Player p = plugin.getServer().getPlayer(pid);
-				if (p == null || !p.isOnline()) {
-					DynamicBanCache.removeIp(pid);
-				}
-			}
-		});
+		UUID pid = plugin.getUuidAsynch(event.getPlayer().getName());
+		Player p = plugin.getPlayer(pid);
+		if (p == null || !p.isOnline())
+			DynamicBanCache.removeIp(pid);
 	}
 
 	@EventHandler(priority = EventPriority.HIGHEST)

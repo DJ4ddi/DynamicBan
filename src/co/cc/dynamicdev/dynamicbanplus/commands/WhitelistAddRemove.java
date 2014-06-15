@@ -45,10 +45,10 @@ public class WhitelistAddRemove implements CommandExecutor {
 		
 		boolean isIp = false;
 		UUID pid = null;
-		if(args[0].matches("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}")) {
+		if(args[1].matches("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}")) {
 			isIp = true;
 		} else {
-			pid = plugin.getUuidAsynch(args[0], plugin.createDelayedCommand(cs, cmd.getName(), args, args[0]));
+			pid = plugin.getUuidAsynch(args[1], plugin.createDelayedCommand(cs, cmd.getName(), args, args[1]));
 			if (pid == null) return true;
 		}
 		

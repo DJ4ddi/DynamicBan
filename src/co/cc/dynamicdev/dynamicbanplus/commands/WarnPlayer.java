@@ -106,7 +106,7 @@ public class WarnPlayer implements CommandExecutor {
 				e.printStackTrace();
 			}
 
-			Player targetPlayer = plugin.getServer().getPlayer(pid);
+			Player targetPlayer = plugin.getPlayer(pid);
 			if (targetPlayer != null) {
 				String warnMsg = plugin.getConfig().getString("other_messages.warned_message")
 						.replace("{REASON}", warnReason)

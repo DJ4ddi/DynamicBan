@@ -5,6 +5,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.UUID;
 
+import org.bukkit.BanList;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -113,7 +114,7 @@ public class TempBanIP implements CommandExecutor {
 
 				SimpleDateFormat sdf = new SimpleDateFormat("EEE, MMM d, yyyy '@' HH:mma");
 				DynamicBanCache.addTempBan(iptoban, tempTimeFinal + "::" + banReason, cs.getName(), sdf.format(new Date()));
-				plugin.getServer().banIP(iptoban.replace("/", "."));
+				plugin.getServer().getBanList(BanList.Type.IP).addBan(iptoban.replace("/", "."), banReason, new Date(tempTimeFinal * 1000), cs.getName());
 				
 				String timeBanned = args[1].replace(":", " ");
 				String banMessage = plugin.getConfig().getString("messages.ip_tempban_message")
@@ -121,7 +122,7 @@ public class TempBanIP implements CommandExecutor {
 						.replace("{SENDER}", cs.getName())
 						.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
 				
-				Player targetPlayer = plugin.getServer().getPlayer(pid);
+				Player targetPlayer = plugin.getPlayer(pid);
 				if (targetPlayer != null) {
 					targetPlayer.kickPlayer(banMessage);
 				}

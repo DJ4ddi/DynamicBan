@@ -56,7 +56,7 @@ public class KickPlayer implements CommandExecutor {
 			
 			playerDataFile = new File("plugins/DynamicBan/playerdata/" + pid + "/", "player.dat");
 			YamlConfiguration playerData = YamlConfiguration.loadConfiguration(playerDataFile);
-			Player playertokick = plugin.getServer().getPlayer(pid);
+			Player playertokick = plugin.getPlayer(pid);
 			int kickNumber = playerData.getInt("kickedNumber");
 			String kickReason;
 			String broadcastReason;

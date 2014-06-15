@@ -106,7 +106,7 @@ public class TempBan implements CommandExecutor {
 				tempTimeFinal += parseTimeSpec(s.replaceAll("[mhdwts]", ""), s);
 			}
 			
-			plugin.getServer().getBanList(BanList.Type.NAME).addBan(args[0], banReason, null, cs.getName());
+			plugin.getServer().getBanList(BanList.Type.NAME).addBan(args[0], banReason, new Date(tempTimeFinal * 1000), cs.getName());
 			DynamicBanCache.addTempBan(pid, tempTimeFinal + "::" + banReason, cs.getName(), sdf.format(new Date()));
 			
 			String timeBanned = args[1].replace(":", " ");
@@ -115,7 +115,7 @@ public class TempBan implements CommandExecutor {
 					.replace("{SENDER}", cs.getName())
 					.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
 			
-			Player targetPlayer = plugin.getServer().getPlayer(pid);
+			Player targetPlayer = plugin.getPlayer(pid);
 			if (targetPlayer != null) {
 				targetPlayer.kickPlayer(banMessage);
 			}

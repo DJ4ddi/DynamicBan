@@ -109,7 +109,7 @@ public class Mute implements CommandExecutor {
 			
 			if (valid) {
 				String timemuted = args[1].replace(":", " ");
-				Player targetPlayer = plugin.getServer().getPlayer(pid);
+				Player targetPlayer = plugin.getPlayer(pid);
 				if (targetPlayer != null) {
 					targetPlayer.sendMessage(plugin.getTag() + plugin.getConfig().getString("messages.mute_message")
 							.replace("{TIME}", timemuted)

@@ -46,7 +46,7 @@ public class Unmute implements CommandExecutor {
 			
 			if (DynamicBanCache.getMute(pid) != null) {
 				DynamicBanCache.removeMute(pid);
-				Player targetPlayer = plugin.getServer().getPlayer(pid);
+				Player targetPlayer = plugin.getPlayer(pid);
 				if (targetPlayer != null) {
 					targetPlayer.getPlayer().sendMessage(plugin.getTag() + plugin.getConfig().getString("messages.unmute_message")
 							.replace("{SENDER}", cs.getName())
