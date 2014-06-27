@@ -135,18 +135,18 @@ public class UUIDCache implements Listener {
 		});
 	}
 
-	@SuppressWarnings("deprecation")
 	private void syncFetch(ArrayList<String> names) {
 		final UUIDFetcher fetcher = new UUIDFetcher(names);
 		Map<String, UUID> newEntries = null;
 		try {
 			newEntries = fetcher.call();
-		} catch (Exception e) {
-			if (plugin.getConfig().getBoolean("config.allow_offline_players")) {
-				newEntries = new HashMap<String, UUID>();
+			if (plugin.getConfig().getBoolean("config.allow_offline_players"))
 				for (String s : names)
-					newEntries.put(s, plugin.getServer().getOfflinePlayer(s).getUniqueId());
-			}
+					if (newEntries.get(s) == null)
+						newEntries.put(s, offlineFetch(s));
+		} catch (Exception e) {
+			if (plugin.getConfig().getBoolean("config.allow_offline_players"))
+				newEntries = offlineFetch(names);
 		}
 		
 		if (newEntries != null) {
@@ -155,6 +155,18 @@ public class UUIDCache implements Listener {
 			executeDelayedCommand(names, newEntries.isEmpty());
 			scheduleCleanup(newEntries);
 		}
+	}
+
+	private Map<String, UUID> offlineFetch(ArrayList<String> names) {
+		Map<String, UUID> newEntries = new HashMap<String, UUID>();
+		for (String s : names)
+			newEntries.put(s, offlineFetch(s));
+		return newEntries;
+	}
+	
+	@SuppressWarnings("deprecation")
+	private UUID offlineFetch(String name) {
+		return plugin.getServer().getOfflinePlayer(name).getUniqueId();
 	}
 
 	private void scheduleCleanup(final Map<String, UUID> entries) {
