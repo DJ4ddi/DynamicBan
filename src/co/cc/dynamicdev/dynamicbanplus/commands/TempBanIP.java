@@ -114,7 +114,7 @@ public class TempBanIP implements CommandExecutor {
 
 				SimpleDateFormat sdf = new SimpleDateFormat("EEE, MMM d, yyyy '@' HH:mma");
 				DynamicBanCache.addTempBan(iptoban, tempTimeFinal + "::" + banReason, cs.getName(), sdf.format(new Date()));
-				plugin.getServer().getBanList(BanList.Type.IP).addBan(iptoban.replace("/", "."), banReason, new Date(tempTimeFinal * 1000), cs.getName());
+				plugin.getServer().getBanList(BanList.Type.IP).addBan(iptoban.replace("/", "."), broadcastReason, new Date(tempTimeFinal * 1000), cs.getName());
 				
 				String timeBanned = args[1].replace(":", " ");
 				String banMessage = plugin.getConfig().getString("messages.ip_tempban_message")

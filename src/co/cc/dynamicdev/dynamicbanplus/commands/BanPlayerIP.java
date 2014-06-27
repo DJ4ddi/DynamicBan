@@ -92,7 +92,7 @@ public class BanPlayerIP implements CommandExecutor {
 					afterBanReason = plugin.combineSplit(1, args, " ");
 				}
 				DynamicBanCache.addIpBan(iptoban, afterBanReason, cs.getName(), date);
-				plugin.getServer().getBanList(BanList.Type.IP).addBan(iptoban.replace("/", "."), afterBanReason, null, cs.getName());
+				plugin.getServer().getBanList(BanList.Type.IP).addBan(iptoban.replace("/", "."), broadcastReason, null, cs.getName());
 				
 				Player targetPlayer = plugin.getPlayer(pid);
 				if (targetPlayer != null) {
