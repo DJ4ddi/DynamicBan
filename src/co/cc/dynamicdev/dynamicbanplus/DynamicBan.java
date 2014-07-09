@@ -50,7 +50,7 @@ public class DynamicBan extends JavaPlugin implements Listener {
 
 	private String tag = "";
 	
-	private AbstractListener[] listeners = new AbstractListener[6];
+	private AbstractListener[] listeners = new AbstractListener[7];
 
 	private boolean setupPermissions() {
 		RegisteredServiceProvider<Permission> permissionProvider = getServer().getServicesManager().getRegistration(net.milkbowl.vault.permission.Permission.class);
@@ -181,8 +181,9 @@ public class DynamicBan extends JavaPlugin implements Listener {
 		listeners[1] = new CommandMuteListener(this);
 		listeners[2] = new ConnectionLimitListener(this);
 		listeners[3] = new DNSBLListener(this);
-		listeners[4] = new MessageLimitListener(this);
-		listeners[5] = new WarnMessageListener(this);
+		listeners[4] = new IpDuplicateListener(this);
+		listeners[5] = new MessageLimitListener(this);
+		listeners[6] = new WarnMessageListener(this);
 		
 		reload();
 		getCommand("dynplayer").setExecutor(new PlayerDetails(this));

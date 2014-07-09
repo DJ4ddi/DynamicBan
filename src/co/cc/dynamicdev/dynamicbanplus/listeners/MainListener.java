@@ -5,11 +5,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import org.bukkit.BanList;
-import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -19,8 +15,6 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.plugin.java.JavaPlugin;
-
 import co.cc.dynamicdev.dynamicbanplus.DynamicBan;
 import co.cc.dynamicdev.dynamicbanplus.DynamicBanCache;
 
@@ -175,37 +169,6 @@ public class MainListener extends AbstractListener {
 						.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
 				player.kickPlayer(lockedipmsg);
 				event.setJoinMessage(null);
-			}
-		}
-	}
-
-	@EventHandler(priority = EventPriority.MONITOR)
-	void pipDuplicate(PlayerJoinEvent event) {
-		if (config.getBoolean("config.broadcast_on_same_ip") == true) {
-			UUID pid = plugin.getUuidAsynch(event.getPlayer().getName());
-			String iptocheck = DynamicBanCache.getIp(pid);
-			UUID olderPlayer = DynamicBanCache.getOlderPlayerWithIp(iptocheck, pid);
-			if (olderPlayer != null) {
-				for (Player broadcastto: Bukkit.getServer().getOnlinePlayers()) {
-					if (plugin.getPermission().has(broadcastto, "dynamicban.check") || broadcastto.isOp()) {
-						String sameIPMsg = config.getString("other_messages.same_ip_message")
-								.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2")
-								.replace("{PLAYER}", event.getPlayer().getName())
-								.replace("{IP}", iptocheck.replace("/", "."))
-								.replace("{OLDERPLAYER}", plugin.getPlayer(olderPlayer).getName());
-						broadcastto.sendMessage(plugin.getTag() + sameIPMsg);
-					}
-				}  
-				Logger.getLogger(JavaPlugin.class.getName()).log(Level.INFO, plugin.getTag() + event.getPlayer().getName() + " logged in with the same IP (" + iptocheck.replace("/", ".") + ") as " + olderPlayer);
-			}
-		}
-	}
-
-	@EventHandler(priority = EventPriority.HIGH)
-	void iplimitQuitCheck(PlayerQuitEvent event) {
-		if (config.getInt("config.messages_per_ip") > 0) {
-			if (DynamicBanCache.getPlayersWithIp(DynamicBanCache.getIp(plugin.getUuidAsynch(event.getPlayer().getName()))) > config.getInt("config.messages_per_ip")) {
-				event.setQuitMessage(null);
 			}
 		}
 	}

@@ -55,6 +55,8 @@ config:
     # Do you want to allow Bukkit to handle offline UUIDs if they don't have a normal one?
     convert_to_uuid: true
     # Do you want to convert the database from names to UUIDs? (doing so will slow down the server startup significantly)
+    enable_bukkit_bans: true
+    # Do you want to enable the Bukkit bans as backup?
 messages:
     # Variables are {SENDER}, {REASON} and {TIME} for temporary actions
     kick_message: "You have been kicked. Reason: {REASON}"
