@@ -65,15 +65,16 @@ public class PlayerDetails implements CommandExecutor {
 						}
 						String initialPlayerIP = playerData.getString("Initial-IP-Address");
 						String lastJoined = playerData.getString("Last-Joined");
-						String ip = DynamicBanCache.getIp(pid);
+						String ip = DynamicBanCache.getIp(pid).replace('/', '.');
 						cs.sendMessage(ChatColor.GOLD + "<<============ " + ChatColor.BOLD + ChatColor.DARK_AQUA + "DynamicBan v" + plugin.getDescription().getVersion() + ChatColor.GOLD + " ============>>");
 						cs.sendMessage(ChatColor.GOLD + "Displaying details for: " + ChatColor.AQUA + displayName);
+						cs.sendMessage(ChatColor.GOLD + "UUID: " + ChatColor.AQUA + pid.toString());
 						if (ip != null) {
 							cs.sendMessage(ChatColor.GOLD + "IP-Address: " + ChatColor.AQUA + ip);
 						} else {
 							cs.sendMessage(ChatColor.GOLD + "The player is not online.");
 						}
-						cs.sendMessage(ChatColor.GOLD + "Initial-IP-Address: " + ChatColor.AQUA + initialPlayerIP);
+						cs.sendMessage(ChatColor.GOLD + "Initial-IP-Address: " + ChatColor.AQUA + initialPlayerIP.replace('/', '.'));
 						cs.sendMessage(ChatColor.GOLD + "Last seen on: " + ChatColor.AQUA + lastJoined);
 					}
 				}
