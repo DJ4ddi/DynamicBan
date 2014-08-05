@@ -10,7 +10,7 @@ commands:
     dynplayer:
         description: Display details for a player.
         usage: /<command> <Playername>
-        aliases: [dp, dplayer, ddetails] 
+        aliases: [dp, dplayer, ddetails, dyndetails] 
     dynkick:
         description: Kick a player.
         usage: /<command> <Playername> [Reason]
@@ -22,11 +22,11 @@ commands:
     dynbanip:
         description: Ban a player's IP.
         usage: /<command> <Playername> [Reason]
-        aliases: [dbip, banip, dynb]
+        aliases: [dbip, banip, dynb, ipban]
     dynunbanip:
         description: Unban a player's IP.
         usage: /<command> <Playername>
-        aliases: [dubip, unban-ip]
+        aliases: [dubip, unbanip, pardonip]
     dynunban:
         description: Unban a player's account.
         usage: /<command> <Playername>
@@ -50,7 +50,7 @@ commands:
     dynwarn:
         description: Warn a player.
         usage: /<command> <Playername> [Reason]
-        aliases: [dw, dwarn, dynwarnplayer]
+        aliases: [dw, dwarn, dynwarnplayer, warn]
     dynpurge:
         description: Reset a player's data.
         usage: /<command> <Playername> <data/warns/kicks>
@@ -58,7 +58,7 @@ commands:
     dynlist:
         description: View a list of online players.
         usage: /<command>
-        aliases: [dlist, diplist]    
+        aliases: [dlist, diplist, iplist]    
     dynreload:
         description: Reload the DynamicBan data.
         usage: /<command>
@@ -66,7 +66,7 @@ commands:
     dyncompare:
         description: Compare the IPs of two players.
         usage: /<command> <Playername> <anotherPlayername>
-        aliases: [dc, dcompare, cip]  
+        aliases: [dc, dcompare, cip]
     dynmute:
         description: Mute a player.
         usage: /<command> <Playername> <Time>
@@ -90,7 +90,7 @@ commands:
     dynunbanrange:
         description: Unban a player's IP range.
         usage: /<command> <Playername>
-        aliases: [durb, dunrange, unban-range]         
+        aliases: [durb, dunrange, unbanrange, pardonrange]         
     dynwhitelist:
         description: Protect a player from bans.
         usage: /<command> <add/remove> <Playername/IP/IP-Range>
