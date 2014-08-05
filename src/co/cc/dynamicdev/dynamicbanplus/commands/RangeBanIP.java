@@ -73,25 +73,20 @@ public class RangeBanIP implements CommandExecutor {
 				Date today = new Date();
 				SimpleDateFormat sdf = new SimpleDateFormat("EEE, MMM d, yyyy '@' HH:mma");
 				String date = sdf.format(today);
-				if (args.length < 3) {
-					afterBanReason = "None";
-				} else {
-					afterBanReason = plugin.combineSplit(2, args, " ");
-				}
+				
 				if (args.length < 3) {
 					broadcastReason = plugin.getConfig().getString("other_messages.default_reason");
+					afterBanReason = "None";
 				} else {
-					broadcastReason = afterBanReason;
+					broadcastReason = plugin.combineSplit(2, args, " ");
+					afterBanReason = broadcastReason;
 				}
-				if (args.length < 3) {
-					banReason = plugin.getConfig().getString("messages.rangeban_message")
-							.replace("{REASON}", plugin.getConfig().getString("other_messages.default_reason"))
-							.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
-				} else {
-					banReason = plugin.getConfig().getString("messages.rangeban_message")
-							.replace("{REASON}", afterBanReason)
-							.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
-				}
+				
+				banReason = plugin.getConfig().getString("messages.rangeban_message")
+						.replace("{REASON}", broadcastReason)
+						.replace("{SENDER}", cs.getName())
+						.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
+					
 				String[] RBIP = iptoban.split("/");
 				if(args[1].contains("level:1")){
 					DynamicBanCache.addRangeBan(RBIP[0] + "/" + RBIP[1] + "/" + RBIP[2] + "/" + "*", afterBanReason, cs.getName(), date);

@@ -64,23 +64,19 @@ public class BanPlayer implements CommandExecutor {
 			Date today = new Date();
 			SimpleDateFormat sdf = new SimpleDateFormat("EEE, MMM d, yyyy '@' HH:mma");
 			String date = sdf.format(today);
-			if (args.length == 1) {
-				banReason = plugin.getConfig().getString("messages.ban_message")
-						.replace("{REASON}", plugin.getConfig().getString("other_messages.default_reason"))
-						.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
-			} else {
-				banReason = plugin.getConfig().getString("messages.ban_message")
-						.replace("{REASON}", plugin.combineSplit(1, args, " "))
-						.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
-			}
 
 			if (args.length == 1) {
 				broadcastReason = plugin.getConfig().getString("other_messages.default_reason");
 				afterBanReason = "None";
 			} else {
 				broadcastReason = plugin.combineSplit(1, args, " ");
-				afterBanReason = plugin.combineSplit(1, args, " ");
+				afterBanReason = broadcastReason;
 			}
+			
+			banReason = plugin.getConfig().getString("messages.ban_message")
+					.replace("{REASON}", broadcastReason)
+					.replace("{SENDER}", cs.getName())
+					.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
 			
 			DynamicBanCache.addPlayerBan(pid, afterBanReason, cs.getName(), date);
 			if (plugin.getConfig().getBoolean("config.enable_bukkit_bans"))

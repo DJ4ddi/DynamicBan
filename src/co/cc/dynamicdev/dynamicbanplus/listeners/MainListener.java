@@ -85,6 +85,7 @@ public class MainListener extends AbstractListener {
 			
 			banMessage = banMessage
 					.replace("{REASON}", (banReason.equals("None"))? config.getString("other_messages.default_reason") : banReason)
+					.replace("{SENDER}", (isIpBan) ? DynamicBanCache.getExecutor(pip) : DynamicBanCache.getExecutor(pid))
 					.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
 			event.disallow(PlayerLoginEvent.Result.KICK_BANNED, banMessage);
 		}
@@ -97,24 +98,28 @@ public class MainListener extends AbstractListener {
 		if (!DynamicBanCache.isWhitelisted(pid) && !DynamicBanCache.isWhitelisted(DynamicBanCache.getIp(pid))) {
 			String[] IP = DynamicBanCache.getIp(pid).split("/");
 			String banReason = null;
+			String ipRange = null;
 			if (DynamicBanCache.getRangeBan(IP[0]+ "/" + "*"+"/" + "*" +"/" + "*") != null
 					&& !DynamicBanCache.isWhitelisted(IP[0]+ "/" + IP[1] + "/" + IP[2] +"/" + "*")
 					&& !DynamicBanCache.isWhitelisted(IP[0]+ "/" + IP[1] + "/" + "*" +"/" + "*")) {
-				banReason = DynamicBanCache.getRangeBan(IP[0]+ "/" + "*"+"/" + "*" +"/" + "*");
+				ipRange = IP[0]+ "/" + "*"+"/" + "*" +"/" + "*";
 			} 
 			if (DynamicBanCache.getRangeBan(IP[0]+ "/" + IP[1] + "/" + "*" +"/" + "*") != null
 					&& !DynamicBanCache.isWhitelisted(IP[0]+ "/" + IP[1] + "/" + IP[2] +"/" + "*")) {
-				banReason = DynamicBanCache.getRangeBan(IP[0]+ "/" + IP[1] + "/" + "*" +"/" + "*");
+				ipRange = IP[0]+ "/" + IP[1] + "/" + "*" +"/" + "*";
 			}
 			if (DynamicBanCache.getRangeBan(IP[0]+ "/" + IP[1] + "/" + IP[2] +"/" + "*") != null) {
-				banReason = DynamicBanCache.getRangeBan(IP[0]+ "/" + IP[1] + "/" + IP[2] +"/" + "*");
+				ipRange = IP[0]+ "/" + IP[1] + "/" + IP[2] +"/" + "*";
 			} 
+			banReason = DynamicBanCache.getRangeBan(ipRange);
+			
 			if (banReason != null) {
 				if (banReason.equals("None")) {
 					banReason = config.getString("other_messages.default_reason");
 				}
 				event.disallow(PlayerLoginEvent.Result.KICK_BANNED, config.getString("messages.rangeban_message")
 						.replace("{REASON}", banReason)
+						.replace("{SENDER}", DynamicBanCache.getExecutor(ipRange))
 						.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2"));
 			}
 		}
@@ -176,9 +181,7 @@ public class MainListener extends AbstractListener {
 	@EventHandler(priority = EventPriority.HIGHEST)
 	void onPlayerQuit(PlayerQuitEvent event) {
 		UUID pid = plugin.getUuidAsynch(event.getPlayer().getName());
-		Player p = plugin.getPlayer(pid);
-		if (p == null || !p.isOnline())
-			DynamicBanCache.removeIp(pid);
+		DynamicBanCache.removeIp(pid);
 	}
 
 	@EventHandler(priority = EventPriority.HIGHEST)

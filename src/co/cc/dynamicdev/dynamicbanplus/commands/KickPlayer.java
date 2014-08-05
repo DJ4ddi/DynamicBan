@@ -61,21 +61,14 @@ public class KickPlayer implements CommandExecutor {
 			String kickReason;
 			String broadcastReason;
 
-			if (args.length == 1) {
-				kickReason = plugin.getConfig().getString("messages.kick_message")
-						.replace("{REASON}", plugin.getConfig().getString("other_messages.default_reason"))
-						.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
-			} else {
-				kickReason = plugin.getConfig().getString("messages.kick_message")
-						.replace("{REASON}", plugin.combineSplit(1, args, " "))
-						.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
-			}
+			broadcastReason = (args.length == 1) ?
+					plugin.getConfig().getString("other_messages.default_reason")
+					: plugin.combineSplit(1, args, " ");
 
-			if (args.length == 1) {
-				broadcastReason = plugin.getConfig().getString("other_messages.default_reason");
-			} else {
-				broadcastReason = plugin.combineSplit(1, args, " ");
-			}
+			kickReason = plugin.getConfig().getString("messages.kick_message")
+					.replace("{REASON}", broadcastReason)
+					.replace("{SENDER}", cs.getName())
+					.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2");
 
 			if (playertokick == null) {
 				cs.sendMessage(plugin.getTag() + ChatColor.RED + args[0] + " is not online!");
