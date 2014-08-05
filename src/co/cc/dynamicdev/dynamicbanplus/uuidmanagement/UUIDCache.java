@@ -27,7 +27,6 @@ import co.cc.dynamicdev.dynamicbanplus.DynamicBan;
  * player, it should have it available immediately because the cache registers
  * itself for the player join/quit events and does background fetches.
  *
- * @author James Crasta
  * @author Adrian Haberecht
  *
  */

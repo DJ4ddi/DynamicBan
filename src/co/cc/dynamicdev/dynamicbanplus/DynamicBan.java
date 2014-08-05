@@ -174,7 +174,7 @@ public class DynamicBan extends JavaPlugin implements Listener {
 		
 		saveConfig();
 		
-		DynamicBanCache.loadAll();
+		DynamicBanCache.loadAll(this);
 		setupPermissions();
 		
 		listeners[0] = new MainListener(this);

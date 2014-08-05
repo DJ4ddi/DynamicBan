@@ -40,7 +40,7 @@ public class UnbanPlayer implements CommandExecutor {
 			if (bukkitBans.isBanned(args[0])) {
 				wasBanned = true;
 				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + args[0] + " is banned by Bukkit, unbanning.");
-				plugin.getServer().getBanList(BanList.Type.NAME).pardon(args[0]);
+				bukkitBans.pardon(args[0]);
 			} else {
 				cs.sendMessage(plugin.getTag() + ChatColor.AQUA + args[0] + " is not banned by Bukkit.");
 			}

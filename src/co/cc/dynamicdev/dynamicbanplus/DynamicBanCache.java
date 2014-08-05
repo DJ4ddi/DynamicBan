@@ -55,7 +55,7 @@ public class DynamicBanCache {
 
 	private static Map<UUID, String> currentips = new HashMap<UUID, String>();
 	
-	public static void loadAll() {
+	public static void loadAll(DynamicBan plugin) {
 		for (String s : bannedplayerfile.getKeys(false)) {
 			UUID p = UUID.fromString(s);
 			if (!bannedplayers.containsKey(p))
@@ -107,10 +107,10 @@ public class DynamicBanCache {
 				whitelist.add(s);
 		
 		for (Player p : Bukkit.getServer().getOnlinePlayers())
-			currentips.put(p.getUniqueId(), p.getAddress().toString().split("/")[1].split(":")[0].replace(".", "/"));
+			currentips.put(plugin.getUuidAsynch(p.getName()), p.getAddress().toString().split("/")[1].split(":")[0].replace(".", "/"));
 	}
 
-	public static void reloadAll() {
+	public static void reloadAll(DynamicBan plugin) {
 		bannedplayers.clear();
 		bannedips.clear();
 		tempbans.clear();
@@ -122,7 +122,7 @@ public class DynamicBanCache {
 		immuneplayers.clear();
 		whitelist.clear();
 		currentips.clear();
-		loadAll();
+		loadAll(plugin);
 	}
 
 	public static String getPlayerBan(UUID p) {
@@ -191,7 +191,7 @@ public class DynamicBanCache {
 	
 	public static UUID getOlderPlayerWithIp(String ip, UUID pid) {
 		for (Entry<UUID, String> e : currentips.entrySet())
-			if (e.getValue().equals(ip) && e.getKey() != pid)
+			if (e.getValue().equals(ip) && !e.getKey().equals(pid))
 				return e.getKey();
 		return null;
 	}

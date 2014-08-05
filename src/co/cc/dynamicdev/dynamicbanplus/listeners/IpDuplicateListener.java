@@ -38,7 +38,7 @@ public class IpDuplicateListener extends AbstractListener {
 							.replace("{OLDERPLAYER}", olderPlayerName);
 					broadcastto.sendMessage(plugin.getTag() + sameIPMsg);
 				}
-			}  
+			}
 			Logger.getLogger(JavaPlugin.class.getName()).log(Level.INFO, plugin.getTag() + event.getPlayer().getName() + " logged in with the same IP (" + iptocheck.replace("/", ".") + ") as " + olderPlayerName);
 		}
 	}

@@ -31,7 +31,7 @@ public class ReloadData implements CommandExecutor {
 			}
 			plugin.reloadConfig();
 			plugin.reload();
-			DynamicBanCache.reloadAll();
+			DynamicBanCache.reloadAll(plugin);
 			cs.sendMessage(plugin.getTag() + ChatColor.GREEN + "Reload successful!");
 			cs.sendMessage(plugin.getTag() + ChatColor.GREEN + "The following were reloaded:");
 			cs.sendMessage(plugin.getTag() + ChatColor.GREEN + "DynamicBan Database");
