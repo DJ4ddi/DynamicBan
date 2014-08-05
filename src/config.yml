@@ -51,27 +51,27 @@ config:
     # Which DNSBL services do you want to be checked?
     dnsbl_result: none
     # What should happen when a blacklisted ip attempts to join? (none, kick, ban, ipban, notify)
-    allow_offline_players: false
+    allow_offline_players: true
     # Do you want to allow Bukkit to handle offline UUIDs if they don't have a normal one?
-    convert_to_uuid: true
-    # Do you want to convert the database from names to UUIDs? (doing so will slow down the server startup significantly)
     enable_bukkit_bans: true
     # Do you want to enable the Bukkit bans as backup?
+    convert_to_uuid: true
+    # Do not change this!
 messages:
     # Variables are {SENDER}, {REASON} and {TIME} for temporary actions
-    kick_message: "You have been kicked. Reason: {REASON}"
+    kick_message: "You have been kicked by {SENDER}. Reason: {REASON}"
     # The kick message.
     mute_message: "&cYou have been muted by {SENDER}. Time left: {TIME}"
     # The mute message.
     unmute_message: "&bYou have been unmuted by {SENDER}."
     # The unmute message.
-    ban_message: "You have been banned. Reason: {REASON}"
+    ban_message: "You have been banned by {SENDER}. Reason: {REASON}"
     # The ban message.
-    tempban_message: "You have been temporarily banned. Time left: {TIME}"
+    tempban_message: "You have been temporarily banned by {SENDER}. Time left: {TIME}"
     # The tempban message.
-    ip_tempban_message: "You have been temporarily ip-banned. Time left: {TIME}"
+    ip_tempban_message: "You have been temporarily ip-banned by {SENDER}. Time left: {TIME}"
     # The tempipban message.
-    ip_ban_message: "Your IP has been banned. Reason: {REASON}"
+    ip_ban_message: "Your IP has been banned by {SENDER}. Reason: {REASON}"
     # The ipban message.
     warn_kick_message: "You were kicked after multiple warnings."
     # The warnkick message.
@@ -79,7 +79,7 @@ messages:
     # The iplock message.
     ip_connections_message: "Too many players connected from your IP."
     # The iplimit message.
-    rangeban_message: "Your IP-range has been banned. Reason: {REASON}"
+    rangeban_message: "Your IP-range has been banned by {SENDER}. Reason: {REASON}"
     # The rangeban message.
     muted_message: "&cYou cannot talk, you have been muted. Time left: {TIME}"
     # The message to send to the player when he/she is muted and attempts to send a message.
