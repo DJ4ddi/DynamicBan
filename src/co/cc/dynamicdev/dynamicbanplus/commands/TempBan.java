@@ -101,11 +101,14 @@ public class TempBan implements CommandExecutor {
 			SimpleDateFormat sdf = new SimpleDateFormat("EEE, MMM d, yyyy '@' HH:mma");
 			String[] unit= args[1].split(":");
 			
-			long tempTimeFinal = System.currentTimeMillis() / 1000;
+			long tempTimeFinal = 0;
 			for (String s : unit) {
 				tempTimeFinal += parseTimeSpec(s.replaceAll("[mhdwts]", ""), s);
 			}
-
+			
+			if (!plugin.permissionTempbanCheck(cs, tempTimeFinal)) return true;
+			tempTimeFinal += System.currentTimeMillis() / 1000;
+			
 			DynamicBanCache.addTempBan(pid, tempTimeFinal + "::" + banReason, cs.getName(), sdf.format(new Date()));
 			if (plugin.getConfig().getBoolean("config.enable_bukkit_bans"))
 				plugin.getServer().getBanList(BanList.Type.NAME).addBan(args[0], banReason, new Date(tempTimeFinal * 1000), cs.getName());

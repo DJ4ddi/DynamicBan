@@ -107,10 +107,13 @@ public class TempBanIP implements CommandExecutor {
 				String iptoban = playerData.getString("IP-Address").replace(".", "/");
 				String[] unit= args[1].split(":");
 				
-				long tempTimeFinal = System.currentTimeMillis() / 1000;
+				long tempTimeFinal = 0;
 				for (String s : unit) {
 					tempTimeFinal += parseTimeSpec(s.replaceAll("[mhdwts]", ""), s);
 				}
+				
+				if (!plugin.permissionTempbanCheck(cs, tempTimeFinal)) return true;
+				tempTimeFinal += System.currentTimeMillis() / 1000;
 
 				SimpleDateFormat sdf = new SimpleDateFormat("EEE, MMM d, yyyy '@' HH:mma");
 				DynamicBanCache.addTempBan(iptoban, tempTimeFinal + "::" + banReason, cs.getName(), sdf.format(new Date()));
