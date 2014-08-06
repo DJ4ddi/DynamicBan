@@ -7,8 +7,10 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -51,6 +53,8 @@ public class DynamicBan extends JavaPlugin implements Listener {
 	private String tag = "";
 	
 	private AbstractListener[] listeners = new AbstractListener[7];
+	
+	private HashMap<String, Long> tempbanLimits = new HashMap<String, Long>(4, 0.9f);
 
 	private boolean setupPermissions() {
 		RegisteredServiceProvider<Permission> permissionProvider = getServer().getServicesManager().getRegistration(net.milkbowl.vault.permission.Permission.class);
@@ -174,6 +178,10 @@ public class DynamicBan extends JavaPlugin implements Listener {
 		
 		saveConfig();
 		
+		ConfigurationSection limits = config.getConfigurationSection("config.tempban_limits");
+		for (String s : limits.getKeys(false))
+			tempbanLimits.put(s.replace('/', '.'), limits.getLong(s));
+		
 		DynamicBanCache.loadAll(this);
 		setupPermissions();
 		
@@ -283,11 +291,25 @@ public class DynamicBan extends JavaPlugin implements Listener {
 	}
 	
 	public boolean permissionCheck(CommandSender cs, String p) {
-		if (cs instanceof Player)
-			if (!(permission.has(cs, "dynamicban." + p) || cs.isOp())) {
-				cs.sendMessage(tag + ChatColor.RED + "Sorry, you do not have the permission to use that command!");
-				return false;
-			}
+		if (cs instanceof Player && !cs.isOp()) {
+			String node = "dynamicban." + p;
+			if (!permission.has(cs, node))
+				if (!permission.has(cs, node.substring(0, node.lastIndexOf('.') + 1) + "*"))
+					if (!permission.has(cs, "dynamicban.*")) {
+						cs.sendMessage(tag + ChatColor.RED + "Sorry, you do not have the permission to use that command!");
+						return false;
+					}
+		}
+		return true;
+	}
+	
+	public boolean permissionTempbanCheck(CommandSender cs, long t) {
+		if (cs instanceof Player && !cs.isOp())
+			for (Entry<String, Long> e : tempbanLimits.entrySet())
+				if (permission.has(cs, e.getKey()) && t > e.getValue()) {
+					cs.sendMessage(tag + ChatColor.RED + "You do not have the permission to ban the player for that long!");
+					return false;
+				}
 		return true;
 	}
 
@@ -304,55 +326,61 @@ public class DynamicBan extends JavaPlugin implements Listener {
 	}
 	
 	private void convertDatabase() {
-		System.out.println("[DynamicBan] Data conversion started.");
-		
-		System.out.println("Removing old player data...");
-		String path = "plugins" + File.separator + "DynamicBan" + File.separator + "playerdata";
-		for (File f : new File(path).listFiles()) {
-			for (File fi : f.listFiles())
-				fi.delete();
-			f.delete();
+		File checkFile = new File("plugins" + File.separator + "DynamicBan");
+		if (checkFile.exists()) {
+			System.out.println("[DynamicBan] Data conversion started.");
+
+			System.out.println("Removing old player data...");
+			String path = "plugins" + File.separator + "DynamicBan" + File.separator + "playerdata";
+			checkFile = new File(path);
+			if (checkFile.exists())
+				for (File f : new File(path).listFiles()) {
+					for (File fi : f.listFiles())
+						fi.delete();
+					f.delete();
+				}
+
+			System.out.println("Clearing Bukkit ban lists...");
+			clearBanList(getServer().getBanList(BanList.Type.IP));
+			clearBanList(getServer().getBanList(BanList.Type.NAME));
+
+			System.out.println("Converting data...");
+			path = "plugins" + File.separator + "DynamicBan" + File.separator + "data";
+			checkFile = new File(path, "ip-log.dat");
+			if (checkFile.exists())
+				checkFile.delete();
+
+			File f = new File(path, "immune-players .dat");
+			File fi = new File(path, "immune-players.dat");
+			if (!fi.exists())
+				f.renameTo(fi);
+			else if (f.exists())
+				f.delete();
+			FileConfiguration immunePlayers = YamlConfiguration.loadConfiguration(fi);
+
+			List<String> invalidNames = new LinkedList<String>();
+			try {
+				processFile(path, "banned-players.dat", false, invalidNames);
+				processFile(path, "muted-players.dat", false, invalidNames);
+				processFile(path, "temp-bans.dat", true, invalidNames);
+				processFile(path, "banned-by.dat", true, invalidNames);
+				processFile(path, "ban-time.dat", true, invalidNames);
+				processConfigurationSection(immunePlayers.getConfigurationSection("immune"), false, invalidNames);
+				processConfigurationSection(immunePlayers.getConfigurationSection("whitelist"), true, invalidNames);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
+			try {
+				immunePlayers.save(fi);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
+			if (!invalidNames.isEmpty())
+				System.out.println("The following names could not be converted: " + invalidNames.toString());
+			System.out.println("[DynamicBan] Conversion complete.");
 		}
-		
-		System.out.println("Clearing Bukkit ban lists...");
-		clearBanList(getServer().getBanList(BanList.Type.IP));
-		clearBanList(getServer().getBanList(BanList.Type.NAME));
-		
-		System.out.println("Converting data...");
-		path = "plugins" + File.separator + "DynamicBan" + File.separator + "data";
-		
-		new File(path, "ip-log.dat").delete();
-		
-		File f = new File(path, "immune-players .dat");
-		File fi = new File(path, "immune-players.dat");
-		if (!fi.exists())
-			f.renameTo(fi);
-		else if (f.exists())
-			f.delete();
-		FileConfiguration immunePlayers = YamlConfiguration.loadConfiguration(fi);
-		
-		List<String> invalidNames = new LinkedList<String>();
-		try {
-			processFile(path, "banned-players.dat", false, invalidNames);
-			processFile(path, "muted-players.dat", false, invalidNames);
-			processFile(path, "temp-bans.dat", true, invalidNames);
-			processFile(path, "banned-by.dat", true, invalidNames);
-			processFile(path, "ban-time.dat", true, invalidNames);
-			processConfigurationSection(immunePlayers.getConfigurationSection("immune"), false, invalidNames);
-			processConfigurationSection(immunePlayers.getConfigurationSection("whitelist"), true, invalidNames);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		try {
-			immunePlayers.save(fi);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		if (!invalidNames.isEmpty())
-			System.out.println("The following names could not be converted: " + invalidNames.toString());
-		System.out.println("[DynamicBan] Conversion complete.");
 	}
 	
 	private void clearBanList(BanList b) {
@@ -362,9 +390,11 @@ public class DynamicBan extends JavaPlugin implements Listener {
 	
 	private void processFile(String path, String name, boolean mixedFile, List<String> invalidNames) throws IOException {
 		File f = new File(path, name);
-		FileConfiguration c = YamlConfiguration.loadConfiguration(f);
-		processConfigurationSection(c, mixedFile, invalidNames);
-		c.save(f);
+		if (f.exists()) {
+			FileConfiguration c = YamlConfiguration.loadConfiguration(f);
+			processConfigurationSection(c, mixedFile, invalidNames);
+			c.save(f);
+		}
 	}
 	
 	private void processConfigurationSection(ConfigurationSection c, boolean mixedFile, List<String> invalidNames) {
