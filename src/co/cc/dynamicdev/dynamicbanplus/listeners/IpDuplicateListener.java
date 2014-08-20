@@ -4,7 +4,6 @@ import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -29,7 +28,7 @@ public class IpDuplicateListener extends AbstractListener {
 		UUID olderPlayer = DynamicBanCache.getOlderPlayerWithIp(iptocheck, pid);
 		if (olderPlayer != null) {
 			String olderPlayerName = plugin.getPlayer(olderPlayer).getName();
-			for (Player broadcastto: Bukkit.getServer().getOnlinePlayers()) {
+			for (Player broadcastto: plugin.getServer().getOnlinePlayers()) {
 				if (plugin.getPermission().has(broadcastto, "dynamicban.check") || broadcastto.isOp()) {
 					String sameIPMsg = sameIpMessage
 							.replaceAll("(&([a-f0-9k-or]))", "\u00A7$2")

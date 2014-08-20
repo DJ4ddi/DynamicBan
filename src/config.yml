@@ -1,4 +1,4 @@
-# DynamicBan 1.3.1a - Comprehensive Administration System. 
+# DynamicBan 1.3.1b - Comprehensive Administration System. 
 config:
     check_for_updates: true
     # Do you want to check for updates?
@@ -58,6 +58,8 @@ config:
     # Do you want to define permission nodes to limit the maximum tempban length?
     allow_offline_players: true
     # Do you want to allow Bukkit to handle offline UUIDs if they don't have a normal one?
+    force_offline_players: false
+    # Do you want to force Bukkit to handle offline UUIDs in any case?
     enable_bukkit_bans: true
     # Do you want to enable the Bukkit bans as backup?
     convert_to_uuid: true

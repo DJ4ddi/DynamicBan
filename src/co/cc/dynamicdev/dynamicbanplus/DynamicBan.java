@@ -146,8 +146,12 @@ public class DynamicBan extends JavaPlugin implements Listener {
 		} catch (Exception e) {
 			System.out.println("[DynamicBan] Server version couldn't be parsed");
 		}
+
+		FileConfiguration config = getConfig();
+		config.options().copyHeader(true);
+		config.options().copyDefaults(true);
 		
-		uuidCache = new UUIDCache(this, getServer().getOnlineMode(), serverVersion < 3043 && serverVersion != 0);
+		uuidCache = new UUIDCache(this, getServer().getOnlineMode(), serverVersion < 3043 && serverVersion != 0, config.getBoolean("config.force_offline_players"));
 		
 		getServer().getScheduler().runTaskAsynchronously(this, new Runnable() {
 			@Override
@@ -155,10 +159,6 @@ public class DynamicBan extends JavaPlugin implements Listener {
 				updateCheck();
 			}
 		});
-		
-		FileConfiguration config = getConfig();
-		config.options().copyHeader(true);
-		config.options().copyDefaults(true);
 		
 		if (!config.contains("config.convert_to_uuid"))
 			config.set("config.convert_to_uuid", true);
@@ -261,7 +261,7 @@ public class DynamicBan extends JavaPlugin implements Listener {
 	
 	@SuppressWarnings("deprecation")
 	public Player getPlayer(UUID pid) {
-		if (getServer().getOnlineMode())
+		if (getServer().getOnlineMode() && serverVersion >= 3043)
 			return getServer().getPlayer(pid);
 		String name = uuidCache.getName(pid);
 		return (name == null) ? null : getServer().getPlayer(name);

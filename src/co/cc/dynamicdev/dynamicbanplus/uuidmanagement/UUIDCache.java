@@ -39,10 +39,10 @@ public class UUIDCache implements Listener {
 	private DynamicBan plugin;
 	private boolean alwaysFetchUuids;
 
-	public UUIDCache(DynamicBan plugin, boolean onlineMode, boolean compatibilityMode) {
+	public UUIDCache(DynamicBan plugin, boolean onlineMode, boolean compatibilityMode, boolean forceOfflineUuids) {
 		Validate.notNull(plugin);
 		this.plugin = plugin;
-		alwaysFetchUuids = !onlineMode || compatibilityMode;
+		alwaysFetchUuids = (!onlineMode || compatibilityMode) && !forceOfflineUuids;
 		if (!onlineMode)
 			reverseCache = new HashMap<UUID, String>();
 		plugin.getServer().getPluginManager().registerEvents(this, plugin);

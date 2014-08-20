@@ -1,6 +1,6 @@
 name: "DynamicBan"
 main: co.cc.dynamicdev.dynamicbanplus.DynamicBan
-version: 1.3.1a
+version: 1.3.1b
 author: [DynamicDev]
 depend: [Vault]
 permissions:
